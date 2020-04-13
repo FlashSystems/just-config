@@ -1,3 +1,8 @@
+![Rust](https://img.shields.io/badge/rust-stable-brightgreen.svg)
+[![Current Version](https://img.shields.io/crates/v/justconfig)](https://crates.io/crates/justconfig)
+[![Docs.rs](https://docs.rs/justconfig/badge.svg)](https://docs.rs/justconfig)
+![License Apache 2.0](https://img.shields.io/crates/l/justconfig)
+
 # Config Library for Rust
 
 Just-config is a configuration library for rust. It strives for the old Unix matra "Do one thing and to it well". It's just build to read configuration values from different sources and fuse them into an easy to handle configuration source. It primary purpose is to go into a configuration class and populate the different, typed configuration values.
@@ -7,7 +12,6 @@ If you just want to use this library, open the documentation, look at the exampl
 ```toml
 config = "0.8"
 ```
-
 
 If you are interested about the rational behind the design of this library (and can stand some highly opinionated reasoning) you can read on.
 
