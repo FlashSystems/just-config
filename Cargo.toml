@@ -1,9 +1,15 @@
 [package]
-name = "ezconf"
-version = "0.1.0"
+name = "justconfig"
+description = "Just a configuration information source for rust"
+license = "Apache-2.0"
+keywords = [ "settings", "config", "configuration", "environment", "env" ]
+categories = [ "config", "parsing" ]
+version = "0.8.0"
 authors = ["Daniel Goß <developer@flashsystems.de>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+homepage = "https://github.com/FlashSystems/just-config"
+repository = "https://github.com/FlashSystems/just-config"
+readme = "README.md"
+exclude = [ "*.code-workspace", ".vscode" ]
 
 [dependencies]

@@ -1,7 +1,106 @@
-use crate::ItemDef;
+//! Validators, in contrast to [processors](../processors/index.html) do not
+//! modify the value on any way.
+//!
+//! They are called after processors and operate on
+//! the already typed configuration value. Therefore they can do things, that
+//! processors cant. They can do validation on attributes of the typed value
+//! (less than for example) that are not easily possible on strings.
+//!
+//! Validators are used to validate the contents of the values of a configuration
+//! item. For an introduction to configuration items see the documentation for
+//! the [`item`](../item/index.html) module.
+//!
+//! Validators are implemented as the combination of a trait and an implementation.
+//! The trait defines the methods that the processor provides and is always
+//! implemented for `Result<TypedItem<T>, ConfigError>` and
+//! `Result<StringItem, ConfigError>`. Each processor method takes
+//! an owned `self` and returns `Result<TypedItem<T>, ConfigError>`. That way
+//! processors can be easily chained.
+//!
+//! The implementation for `Result<StringItem, ConfigError>` is only a wrapper
+//! that does the type conversion from `String` to `T` on the first validator
+//! call. All validator further down the pipeline operate directly on the converted
+//! value.
+//!
+//! To use a validator just put directly after the
+//! [`get`](../struct.Config.html#method.get) method of the
+//! [`Config`](../struct.Config.html) struct or after the last processor.
+//!
+//! ```rust
+//! # use justconfig::Config;
+//! # use justconfig::ConfPath;
+//! # use justconfig::error::ConfigError;
+//! # use justconfig::item::ValueExtractor;
+//! # use justconfig::sources::defaults::Defaults;
+//! # use justconfig::validators::Range;
+//! # let mut conf = Config::default();
+//! # let mut defaults = Defaults::default();
+//! defaults.set(conf.root().push_all(&["myvalue"]), "4", "source info");
+//! conf.add_source(defaults);
+//!
+//! let at_most_five: i16 = conf.get(ConfPath::from(&["myvalue"])).max(5).value().unwrap();
+//!
+//! // This will fail because 4 is more that 3.
+//! let at_most_three: Result<i16, ConfigError> = conf.get(ConfPath::from(&["myvalue"])).max(3).value();
+//! assert!(at_most_three.is_err());
+//! ```
+//!
+//! ## Implementing a validator
+//!
+//! To implement a new validator first have a look at the [source](../../src/justconfig/validators.rs.html)
+//! of the existing validators.
+//!
+//! For validators there is a helper method within the
+//! [`Item`](../item/struct.StringItem.html) struct. This method is called
+//! [`filter`](../item/struct.StringItem.html#method.filter).
+//!
+//! The validator first checks, if there is an error value within the `Result`.
+//! If there is one, the error is returned without any further validation.
+//! Then `filter` is called and the result of the filtering operation is returned to
+//! the next step of the pipeline. A basic validator looks like this:
+//!
+//! ```rust
+//! use std::str::FromStr;
+//! use std::convert::TryInto;
+//! use std::error::Error;
+//! use justconfig::error::ConfigError;
+//! use justconfig::item::{StringItem, TypedItem, MapAction};
+//!
+//! pub trait IsFrobable<T: FromStr> {
+//!   fn isFrobable(self, max_frobability: u8) -> Result<TypedItem<T>, ConfigError>;
+//! }
+//!
+//! impl <T: FromStr> IsFrobable<T> for Result<TypedItem<T>, ConfigError> {
+//!   fn isFrobable(self, max_frobability: u8) -> Result<TypedItem<T>, ConfigError> {
+//!     self?.filter(|v| {
+//!       // Your code goes here.
+//! #     Ok(())
+//!     })
+//!   }
+//! }
+//!
+//! // This is the necessary wrapper to ensure the conversion of StringItem to
+//! // to TypedItem<T>.
+//! impl <T: FromStr> IsFrobable<T> for Result<StringItem, ConfigError> where T::Err: Error + 'static {
+//!   fn isFrobable(self, max_frobability: u8) -> Result<TypedItem<T>, ConfigError> {
+//!     (self.try_into() as Result<TypedItem<T>, ConfigError>).isFrobable(max_frobability)
+//!   }
+//! }
+//! ```
+//! This example shows the necessary wrapper that allows a validator to be called
+//! on the string- and typed-value.
+//!
+//! The type argument `T` your validator must be bound to implement the trait `FromStr`.
+//! This is necessary to allow the conversion from `StringItem` to `TypedItem<T>`. If
+//! your validator needs `T` to be bound to multiple traits just add them after the
+//! 'FromStr' trait using the `+` syntax.
 use std::fmt;
 use std::error::Error;
 use std::str::FromStr;
+use std::convert::TryInto;
+
+use crate::error::ConfigError;
+use crate::item::{StringItem, TypedItem};
 
 #[derive(Debug)]
 pub enum ValidatorError {
@@ -25,47 +124,215 @@ impl fmt::Display for ValidatorError {
 impl Error for ValidatorError {
 }
 
-pub trait NotEmpty {
-	fn not_empty(&mut self) -> &mut Self;
+/// Validates if a configuration value is within range by using the
+/// [`PartialOrd`](https://doc.rust-lang.org/std/cmp/trait.PartialOrd.html)
+/// trait of the configuration target value.
+pub trait Range<T: FromStr + PartialOrd + fmt::Display> {
+	fn min(self, minimum: T) -> Result<TypedItem<T>, ConfigError>;
+	fn max(self, maximum: T) -> Result<TypedItem<T>, ConfigError>;
+	fn between(self, minimum: T, maximum: T) -> Result<TypedItem<T>, ConfigError>;
 }
 
-impl NotEmpty for ItemDef {
-	fn not_empty(&mut self) -> &mut Self {
-		self.add(Box::new(|value| if value.is_empty() { Err(Box::new(ValidatorError::Empty)) } else { Ok(()) } ));
-		self
+impl <T: FromStr + PartialOrd + fmt::Display> Range<T> for Result<TypedItem<T>, ConfigError> {
+	/// Makes sure that the configuration value is at least the given value.
+	///
+	/// Uses the
+	/// [`PartialOrd`](https://doc.rust-lang.org/std/cmp/trait.PartialOrd.html)
+	/// trait to make sure the configured value is less or equal the given
+	/// value.
+	///
+	/// ## Example
+	///
+	/// ```should_panic
+	/// # use justconfig::Config;
+	/// # use justconfig::ConfPath;
+	/// # use justconfig::item::ValueExtractor;
+	/// # use justconfig::sources::defaults::Defaults;
+	/// # use justconfig::validators::Range;
+	/// #
+	/// # let mut conf = Config::default();
+	/// # let mut defaults = Defaults::default();
+	/// defaults.set(conf.root().push_all(&["myitem"]), "4", "source info");
+	/// conf.add_source(defaults);
+	///
+	/// // This will panic because the value 4 is less than 5.
+	/// let value: i32 = conf.get(ConfPath::from(&["myitem"])).min(5).value().unwrap();
+	/// ```
+	fn min(self, minimum: T) -> Result<TypedItem<T>, ConfigError> {
+		self?.filter(|v| if *v < minimum {
+				Err(Box::new(ValidatorError::BelowMinimum(format!("{}", minimum))))
+			} else {
+				Ok(())
+			}
+		)
+	}
+
+	/// Makes sure that the configuration value is at most the given value.
+	///
+	/// Uses the
+	/// [`PartialOrd`](https://doc.rust-lang.org/std/cmp/trait.PartialOrd.html)
+	/// trait to make sure the configured value is greater or equal to the given
+	/// value.
+	///
+	/// ## Example
+	///
+	/// ```should_panic
+	/// # use justconfig::Config;
+	/// # use justconfig::ConfPath;
+	/// # use justconfig::item::ValueExtractor;
+	/// # use justconfig::sources::defaults::Defaults;
+	/// # use justconfig::validators::Range;
+	/// #
+	/// # let mut conf = Config::default();
+	/// # let mut defaults = Defaults::default();
+	/// defaults.set(conf.root().push_all(&["myitem"]), "10", "source info");
+	/// conf.add_source(defaults);
+	///
+	/// // This will panic because the value 10 is more than 5.
+	/// let value: i32 = conf.get(ConfPath::from(&["myitem"])).max(5).value().unwrap();
+	/// ```
+	fn max(self, maximum: T) -> Result<TypedItem<T>, ConfigError> {
+		self?.filter(|v| if *v > maximum {
+				Err(Box::new(ValidatorError::AboveMaximum(format!("{}", maximum))))
+			} else {
+				Ok(())
+			}
+		)
+	}
+
+	/// Makes sure that the configuration value is within a specified range.
+	///
+	/// Uses the
+	/// [`PartialOrd`](https://doc.rust-lang.org/std/cmp/trait.PartialOrd.html)
+	/// trait to make sure the configured value is between the specified values
+	/// including these values.
+	///
+	/// ## Example
+	///
+	/// ```rust
+	/// # use justconfig::Config;
+	/// # use justconfig::ConfPath;
+	/// # use justconfig::item::ValueExtractor;
+	/// # use justconfig::sources::defaults::Defaults;
+	/// # use justconfig::validators::Range;
+	/// #
+	/// # let mut conf = Config::default();
+	/// # let mut defaults = Defaults::default();
+	/// defaults.set(conf.root().push_all(&["myitem"]), "10", "source info");
+	/// conf.add_source(defaults);
+	///
+	/// // This will succeed because 10 is between 5 and 20.
+	/// let value: i32 = conf.get(ConfPath::from(&["myitem"])).between(5, 20).value().unwrap();
+	/// ```
+	fn between(self, minimum: T, maximum: T) -> Result<TypedItem<T>, ConfigError> {
+		self?.filter(|v| if *v < minimum || *v > maximum {
+				Err(Box::new(ValidatorError::NotBetween(format!("{}", minimum), format!("{}", maximum))))
+			} else {
+				Ok(())
+			}
+		)
 	}
 }
 
-pub trait Range<T: PartialOrd + FromStr + fmt::Display + 'static> where <T as std::str::FromStr>::Err: std::error::Error {
-	fn min(&mut self, minimum: T) -> &mut Self;
-	fn max(&mut self, maximum: T) -> &mut Self;
-	fn between(&mut self, minimum: T, maximum: T) -> &mut Self;
-	fn positive(&mut self) -> &mut Self;
-	fn negative(&mut self) -> &mut Self;
+impl <T: FromStr + PartialOrd + fmt::Display> Range<T> for Result<StringItem, ConfigError> where T::Err: Error + 'static {
+	fn min(self, minimum: T) -> Result<TypedItem<T>, ConfigError> {
+		(self.try_into() as Result<TypedItem<T>, ConfigError>).min(minimum)
+	}
+
+	fn max(self, maximum: T) -> Result<TypedItem<T>, ConfigError> {
+		(self.try_into() as Result<TypedItem<T>, ConfigError>).max(maximum)
+	}
+
+	fn between(self, minimum: T, maximum: T) -> Result<TypedItem<T>, ConfigError> {
+		(self.try_into() as Result<TypedItem<T>, ConfigError>).between(minimum, maximum)
+	}
 }
 
-impl <T: PartialOrd + FromStr + fmt::Display + 'static> Range<T> for ItemDef where <T as std::str::FromStr>::Err: std::error::Error {
-	fn min(&mut self, minimum: T) -> &mut Self {
-		self.add(Box::new(move |value| if T::from_str(value)? < minimum { Err(Box::new(ValidatorError::BelowMinimum(format!("{}", minimum)))) } else { Ok(()) } ));
-		self
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::Config;
+	use crate::confpath::ConfPath;
+	use crate::item::ValueExtractor;
+	use crate::sources::defaults::Defaults;
+
+	#[test]
+	fn range_good() {
+		let mut c = Config::default();
+		let mut d = Defaults::default();
+
+		d.set(c.root().push_all(&["ten"]), "10", "10");
+		d.set(c.root().push_all(&["five"]), "5", "5");
+		d.set(c.root().push_all(&["zero"]), "0", "0");
+		d.set(c.root().push_all(&["neg_one"]), "-1", "-1");
+		c.add_source(d);
+
+		// Test min
+		assert_eq!(c.get(ConfPath::from(&["ten"])).min(5).value().unwrap(), 10u32);
+		assert_eq!(c.get(ConfPath::from(&["five"])).min(5).value().unwrap(), 5u32);
+		assert_eq!(c.get(ConfPath::from(&["zero"])).min(0).value().unwrap(), 0u32);
+		assert_eq!(c.get(ConfPath::from(&["neg_one"])).min(-1).value().unwrap(), -1i32);
+
+		// Test max
+		assert_eq!(c.get(ConfPath::from(&["ten"])).max(10).value().unwrap(), 10u32);
+		assert_eq!(c.get(ConfPath::from(&["five"])).max(10).value().unwrap(), 5u32);
+		assert_eq!(c.get(ConfPath::from(&["zero"])).max(0).value().unwrap(), 0u32);
+		assert_eq!(c.get(ConfPath::from(&["neg_one"])).max(0).value().unwrap(), -1i32);
+
+		// Test between
+		assert_eq!(c.get(ConfPath::from(&["ten"])).between(0, 10).value().unwrap(), 10u32);
+		assert_eq!(c.get(ConfPath::from(&["ten"])).between(10, 10).value().unwrap(), 10u32);
+		assert_eq!(c.get(ConfPath::from(&["five"])).between(0, 10).value().unwrap(), 5u32);
+		assert_eq!(c.get(ConfPath::from(&["zero"])).between(-10, 10).value().unwrap(), 0i32);
+		assert_eq!(c.get(ConfPath::from(&["neg_one"])).between(-1, 0).value().unwrap(), -1i32);
 	}
 
-	fn max(&mut self, maximum: T) -> &mut Self {
-		self.add(Box::new(move |value| if T::from_str(value)? > maximum { Err(Box::new(ValidatorError::AboveMaximum(format!("{}", maximum)))) } else { Ok(()) } ));
-		self
+	#[test]
+	#[should_panic(expected = "BelowMinimum")]
+	fn range_min_bad() {
+		let mut c = Config::default();
+		let mut d = Defaults::default();
+
+		d.set(c.root().push_all(&["ten"]), "10", "10");
+		c.add_source(d);
+
+		let _: u32 = c.get(ConfPath::from(&["ten"])).min(20).value().unwrap();
 	}
 
-	fn between(&mut self, minimum: T, maximum: T) -> &mut Self {
-		self.add(Box::new(move |value| { let v = T::from_str(value)?; if v < minimum || v > maximum { Err(Box::new(ValidatorError::NotBetween(format!("{}", minimum), format!("{}", maximum)))) } else { Ok(()) } } ));
-		self
+	#[test]
+	#[should_panic(expected = "AboveMaximum")]
+	fn range_max_bad() {
+		let mut c = Config::default();
+		let mut d = Defaults::default();
+
+		d.set(c.root().push_all(&["ten"]), "10", "10");
+		c.add_source(d);
+
+		let _: u32 = c.get(ConfPath::from(&["ten"])).max(5).value().unwrap();
 	}
 
-	fn positive(&mut self) -> &mut Self {
-		self
+	#[test]
+	#[should_panic(expected = "NotBetween")]
+	fn range_between_bad_lower() {
+		let mut c = Config::default();
+		let mut d = Defaults::default();
+
+		d.set(c.root().push_all(&["ten"]), "10", "10");
+		c.add_source(d);
+
+		let _: u32 = c.get(ConfPath::from(&["ten"])).between(20, 30).value().unwrap();
 	}
 
-	fn negative(&mut self) -> &mut Self {
-		self
-	}
+	#[test]
+	#[should_panic(expected = "NotBetween")]
+	fn range_between_bad_upper() {
+		let mut c = Config::default();
+		let mut d = Defaults::default();
 
+		d.set(c.root().push_all(&["ten"]), "10", "10");
+		c.add_source(d);
+
+		let _: u32 = c.get(ConfPath::from(&["ten"])).between(0, 5).value().unwrap();
+	}
 }
