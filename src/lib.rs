@@ -15,6 +15,13 @@
 //!
 //! ## Navigating configuration information
 //!
+//! ## Configuration paths
+//!
+//! Configuration information in just-config is represented as a set of nodes.
+//! Each node can have sub nodes forming a configuration tree. To not limit the
+//! developer to a specific choice of separator character the node tree is
+//! represented as an instance of the [ConfPath](struct.ConfPath.html) struct.
+//!
 //! ## Configuration pipeline
 //!
 //! Configuration information in `just-config` is processed using a
@@ -32,7 +39,7 @@
 //! sources can be mixed and matched.
 //!
 //! There are some [configuration sources already included](sources/index.html)
-//! in joust config.
+//! in just-config.
 //!
 //! ### Processors
 //!
@@ -137,6 +144,36 @@
 //! conf.add_source(defaults);
 //! ```
 //!
+//!
+//! ## Enumerating keys
+//!
+//! Every `ConfPath` keeps track of all items that where created using it. That
+//! way configuration sources can create a list of configuration items that can
+//! be enumerated. The [`ConfigText` source](sources/text/index.html) offers the
+//! [`with_path`](sources/text/struct.ConfigText.html#method.with_path) method
+//! that allows you to pass a `ConfPath` into the parser. This `ConfPath` is
+//! used to create the `ConfPath` instances for every configuration node. This
+//! way the configuration can be enumerated using the passed instance.
+//!
+//! ```no_run
+//! use justconfig::Config;
+//! use justconfig::ConfPath;
+//! use justconfig::sources::text::ConfigText;
+//! use justconfig::sources::defaults::Defaults;
+//! use justconfig::item::ValueExtractor;
+//! use std::fs::File;
+//!
+//! let mut conf = Config::default();
+//!
+//! let config_file = File::open("myconfig.conf").expect("Could not open config file.");
+//! let config_file_path = ConfPath::default();
+//! conf.add_source(ConfigText::with_path(config_file, "myconfig.conf", &config_file_path).expect("Loading configuration file failed."));
+//!
+//! for config_node in config_file_path.children() {
+//!     print!("{}", config_node.tail_component_name().unwrap())
+//! }
+//! ```
+
 use std::default::Default;
 
 pub mod item;
