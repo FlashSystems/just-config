@@ -397,7 +397,7 @@ mod tests {
 	fn assert_item(items: StringItem, template: &[&str]) {
 		// This construction generates a Result-Value that can be used with the ValueExtractor-Trait-Impl to get the values of the StringItem.
 		// It's a little bit convoluted but makes sure we use the standard tooling for the test.
-		let items: Vec<String> = Ok(Result::<StringItem, ConfigError>::Ok(items).unwrap()).values().unwrap();
+		let items: Vec<String> = Ok(Result::<StringItem, ConfigError>::Ok(items).unwrap()).values(..).unwrap();
 		let mut items_iter = items.iter();
 		let mut tmpl_iter = template.iter();
 

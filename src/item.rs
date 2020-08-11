@@ -66,6 +66,7 @@ use std::str::FromStr;
 use std::rc::Rc;
 use std::convert::TryInto;
 use std::error::Error;
+use std::ops::RangeBounds;
 
 /// Trait implemented by source location structs provided by data sources.
 ///
@@ -248,7 +249,7 @@ pub trait ValueExtractor<T: FromStr> {
 	///
 	/// This method should be used to return optional configuration values.
 	/// A default value can be provided by using `unwrap_or`.
-	/// 
+	///
 	/// ## Example
 	///
 	/// ```rust
@@ -273,7 +274,7 @@ pub trait ValueExtractor<T: FromStr> {
 	///
 	/// This method should be used to return mandatory configuration values that
 	/// should result in an error if they are not found.
-	/// 
+	///
 	/// ## Example
 	///
 	/// ```rust
@@ -297,7 +298,29 @@ pub trait ValueExtractor<T: FromStr> {
 	/// to exist. Use this method to read multi value items. If the
 	/// configuration item does not exist, an empty array is returned.
 	/// 
+	/// The method accepts a range to specify the which number of configuration
+	/// values is valid. If any number of configuration values is acceptible,
+	/// just specify `..`. If only a limited number of values is valid, specify
+	/// a range.
+	///
 	/// ## Example
+	///
+	/// ```rust
+	/// # use justconfig::Config;
+	/// # use justconfig::ConfPath;
+	/// # use justconfig::item::ValueExtractor;
+	/// # use justconfig::sources::defaults::Defaults;
+	/// #
+	/// # let mut conf = Config::default();
+	/// # let mut defaults = Defaults::default();
+	/// # defaults.set(conf.root().push_all(&["myvalue"]), "3", "source info");
+	/// # conf.add_source(defaults);
+	/// #
+	/// let myvalue: Vec<u32> = conf.get(ConfPath::from(&["myvalue"])).values(..).expect("Error");
+	/// ```
+	/// 
+	/// If there must be at least one instance of `myvalue` specify a range of
+	/// `1..`:
 	/// 
 	/// ```rust
 	/// # use justconfig::Config;
@@ -310,9 +333,51 @@ pub trait ValueExtractor<T: FromStr> {
 	/// # defaults.set(conf.root().push_all(&["myvalue"]), "3", "source info");
 	/// # conf.add_source(defaults);
 	/// #
-	/// let myvalue: Vec<u32> = conf.get(ConfPath::from(&["myvalue"])).values().expect("Error");
+	/// let myvalue: Vec<u32> = conf.get(ConfPath::from(&["myvalue"])).values(1..).expect("Error");
 	/// ```
-	fn values(self) -> Result<Vec<T>, ConfigError>;
+	/// 
+	/// If the number of values should be limited to at most 3 values the range
+	/// must be `..=3`.
+	/// 
+	fn values<R: RangeBounds<usize>>(self, range: R) -> Result<Vec<T>, ConfigError>;
+}
+
+#[allow(clippy::unnecessary_unwrap)] // Until https://github.com/rust-lang/rfcs/pull/2497 gets implemented
+fn values_out_of_range<T: FromStr, R: std::ops::RangeBounds<usize>>(mut item: TypedItem<T>, range: R) -> Result<Vec<T>, ConfigError> {
+	let num_items = item.0.values.len();
+
+	if range.contains(&num_items) {
+		item.0.values.drain(..).map(|r| Rc::try_unwrap(r).map(|v| v.value).map_err(|_| ConfigError::MultipleReferences)).collect()
+	} else {
+		// The number of items is not part of the range. Check if the upper or lower bound
+		// was violated.
+		// The lower limit is inclusive, the upper is exlusive. This is done to make sure
+		// we do not underflow the unsigned value.
+		let lower_limit_inc = match range.start_bound() {
+			std::ops::Bound::Included(min) => Some(*min),
+			std::ops::Bound::Excluded(min) => Some(*min + 1),
+			std::ops::Bound::Unbounded => None
+		};
+
+		let upper_limit_excl = match range.end_bound() {
+			std::ops::Bound::Included(max) => Some(*max + 1),
+			std::ops::Bound::Excluded(max) => Some(*max),
+			std::ops::Bound::Unbounded => None
+		};
+
+		if lower_limit_inc.is_some() && (num_items < lower_limit_inc.unwrap()) {
+			// Lower bound violated
+			Err(ConfigError::NotEnoughValues(lower_limit_inc.unwrap(), item.0.key))
+		} else if upper_limit_excl.is_some() && (num_items >= upper_limit_excl.unwrap()) {
+			let first_surplus_index = upper_limit_excl.unwrap().saturating_sub(1);
+			// Upper bound violated
+			let surplus_sources = item.0.values.drain(first_surplus_index..).map(|r| Rc::try_unwrap(r).map(|v| v.source).map_err(|_| ConfigError::MultipleReferences)).collect::<Result<Vec<Rc<dyn SourceLocation>>, ConfigError>>()?;
+
+			Err(ConfigError::TooManyValues(first_surplus_index, item.0.key, surplus_sources))
+		} else {
+			unreachable!("This is not possible because we checked that num_items is not contained in range.");
+		}
+	}
 }
 
 impl <T: FromStr> ValueExtractor<T> for Result<TypedItem<T>, ConfigError> {
@@ -330,15 +395,15 @@ impl <T: FromStr> ValueExtractor<T> for Result<TypedItem<T>, ConfigError> {
 		match ci.values.len() {
 			0 => Err(ConfigError::ValueNotFound(ci.key)),
 			1 => Rc::try_unwrap(ci.values.pop().unwrap()).map(|v| v.value).map_err(|_| ConfigError::MultipleReferences),
-			_ => Err(ConfigError::TooManyValues(ci.key, ci.values.iter().map(|v| v.source()).collect()))
+			_ => Err(ConfigError::TooManyValues(1, ci.key, ci.values.iter().map(|v| v.source()).collect()))
 		}
 	}
 
-	fn values(self) -> Result<Vec<T>, ConfigError> {
+	fn values<R: std::ops::RangeBounds<usize>>(self, range: R) -> Result<Vec<T>, ConfigError> {
 		// This match converts a ValueNotFound error into an empty vector.
 		// This makes sure that an empty value-vectors is equvalent with an ValueNotFound error for all purposes.
 		match self {
-			Ok(mut item) => item.0.values.drain(..).map(|r| Rc::try_unwrap(r).map(|v| v.value).map_err(|_| ConfigError::MultipleReferences)).collect(),
+			Ok(item) => values_out_of_range(item, range),
 			Err(ConfigError::ValueNotFound(_)) => Ok(Vec::default()),
 			Err(error) => Err(error)
 		}
@@ -354,8 +419,8 @@ impl <T: FromStr> ValueExtractor<T> for Result<StringItem, ConfigError> where T:
 		(self.try_into() as Result<TypedItem<T>, ConfigError>).value()
 	}
 
-	fn values(self) -> Result<Vec<T>, ConfigError> {
-		(self.try_into() as Result<TypedItem<T>, ConfigError>).values()
+	fn values<R: RangeBounds<usize>>(self, range: R) -> Result<Vec<T>, ConfigError> {
+		(self.try_into() as Result<TypedItem<T>, ConfigError>).values(range)
 	}
 }
 
@@ -397,7 +462,7 @@ mod tests {
 	fn value_two_values() {
 		let c = prepare_test_config();
 
-		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).value() as Result<String, ConfigError>).unwrap_err()), "More than one value found for key two_values@['default from 2.1', 'default from 2.2']");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).value() as Result<String, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.1', 'default from 2.2']");
 	}
 
 	#[test]
@@ -418,14 +483,14 @@ mod tests {
 	fn try_value_two_values() {
 		let c = prepare_test_config();
 
-		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).try_value() as Result<Option<String>, ConfigError>).unwrap_err()), "More than one value found for key two_values@['default from 2.1', 'default from 2.2']");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).try_value() as Result<Option<String>, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.1', 'default from 2.2']");
 	}
 
 	#[test]
 	fn values_no_value() {
 		let c = prepare_test_config();
 
-		let values: Vec<String> = c.get(c.root().push_all(&["no_value"])).values().unwrap();
+		let values: Vec<String> = c.get(c.root().push_all(&["no_value"])).values(..).unwrap();
 		assert_eq!(values.len(), 0);
 	}
 
@@ -433,7 +498,7 @@ mod tests {
 	fn values_one_value() {
 		let c = prepare_test_config();
 
-		let mut values: Vec<String> = c.get(c.root().push_all(&["one_value"])).values().unwrap();
+		let mut values: Vec<String> = c.get(c.root().push_all(&["one_value"])).values(..).unwrap();
 		assert_eq!(values.len(), 1);
 		assert_eq!(values.pop().unwrap(), "one_value");
 	}
@@ -442,9 +507,53 @@ mod tests {
 	fn values_two_values() {
 		let c = prepare_test_config();
 
-		let mut values: Vec<String> = c.get(c.root().push_all(&["two_values"])).values().unwrap();
+		let mut values: Vec<String> = c.get(c.root().push_all(&["two_values"])).values(..).unwrap();
 		assert_eq!(values.len(), 2);
 		assert_eq!(values.pop().unwrap(), "two_values");
 		assert_eq!(values.pop().unwrap(), "two_values");
+	}
+
+	#[test]
+	fn range_lower_limit() {
+		let c = prepare_test_config();
+
+		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(3..) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'two_values\' must have at least 3 values.");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(4..5) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'two_values\' must have at least 4 values.");
+	}	
+
+	#[test]
+	fn range_upper_limit() {
+		let c = prepare_test_config();
+
+		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(..=1) as Result<Vec<String>, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.2']");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(1..=1) as Result<Vec<String>, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.2']");
+	}	
+
+	#[test]
+	fn range_ok() {
+		let c = prepare_test_config();
+
+		let mut values: Vec<String> = c.get(c.root().push_all(&["two_values"])).values(1..=2).unwrap();
+		assert_eq!(values.len(), 2);
+		assert_eq!(values.pop().unwrap(), "two_values");
+		assert_eq!(values.pop().unwrap(), "two_values");
+
+		let mut values: Vec<String> = c.get(c.root().push_all(&["two_values"])).values(2..3).unwrap();
+		assert_eq!(values.len(), 2);
+		assert_eq!(values.pop().unwrap(), "two_values");
+		assert_eq!(values.pop().unwrap(), "two_values");
+
+		let mut values: Vec<String> = c.get(c.root().push_all(&["two_values"])).values(0..10).unwrap();
+		assert_eq!(values.len(), 2);
+		assert_eq!(values.pop().unwrap(), "two_values");
+		assert_eq!(values.pop().unwrap(), "two_values");
+
+		let mut values: Vec<String> = c.get(c.root().push_all(&["one_value"])).values(..3).unwrap();
+		assert_eq!(values.len(), 1);
+		assert_eq!(values.pop().unwrap(), "one_value");
+
+		let mut values: Vec<String> = c.get(c.root().push_all(&["one_value"])).values(1..).unwrap();
+		assert_eq!(values.len(), 1);
+		assert_eq!(values.pop().unwrap(), "one_value");
 	}
 }

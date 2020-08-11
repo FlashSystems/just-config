@@ -599,24 +599,24 @@ mod tests {
 		d.put(c.root().push_all(&["multisplit"]), "3:4:5", "multisplit.2");
 		c.add_source(d);
 
-		let values: Vec<u32> = c.get(ConfPath::from(&["splitme"])).explode(',').values().unwrap();
+		let values: Vec<u32> = c.get(ConfPath::from(&["splitme"])).explode(',').values(..).unwrap();
 
 		assert_eq!(values.len(), 3);
 		assert_eq!(values[0], 1);
 		assert_eq!(values[1], 2);
 		assert_eq!(values[2], 3);
 
-		let values: Vec<u32> = c.get(ConfPath::from(&["ten"])).explode(',').values().unwrap();
+		let values: Vec<u32> = c.get(ConfPath::from(&["ten"])).explode(',').values(..).unwrap();
 
 		assert_eq!(values.len(), 1);
 		assert_eq!(values[0], 10);
 
-		let values: Vec<String> = c.get(ConfPath::from(&["empty"])).explode(',').values().unwrap();
+		let values: Vec<String> = c.get(ConfPath::from(&["empty"])).explode(',').values(..).unwrap();
 
 		assert_eq!(values.len(), 1);
 		assert!(values[0].is_empty());
 
-		let values: Vec<u32> = c.get(ConfPath::from(&["multisplit"])).explode(':').values().unwrap();
+		let values: Vec<u32> = c.get(ConfPath::from(&["multisplit"])).explode(':').values(..).unwrap();
 
 		assert_eq!(values.len(), 5);
 		assert_eq!(values[0], 1);
@@ -685,13 +685,13 @@ mod tests {
 		d.put(c.root().push_all(&["all_empty"]), "", "all_empty2");
 		c.add_source(d);
 
-		let mut values: Vec<String> = c.get(ConfPath::from(&["some_empty"])).not_empty().values().unwrap();
+		let mut values: Vec<String> = c.get(ConfPath::from(&["some_empty"])).not_empty().values(..).unwrap();
 		assert_eq!(values.len(), 2);
 		assert_eq!(values.pop().unwrap(), "not_empty");
 		assert_eq!(values.pop().unwrap(), "some_empty");
 
 
-		let values: Vec<String> = c.get(ConfPath::from(&["all_empty"])).not_empty().values().unwrap();
+		let values: Vec<String> = c.get(ConfPath::from(&["all_empty"])).not_empty().values(..).unwrap();
 		assert_eq!(values.len(), 0);
 	}
 
