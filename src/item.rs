@@ -66,6 +66,7 @@ use std::str::FromStr;
 use std::rc::Rc;
 use std::convert::TryInto;
 use std::error::Error;
+use std::ops::RangeBounds;
 
 /// Trait implemented by source location structs provided by data sources.
 ///
@@ -312,7 +313,12 @@ pub trait ValueExtractor<T: FromStr> {
 	/// #
 	/// let myvalue: Vec<u32> = conf.get(ConfPath::from(&["myvalue"])).values().expect("Error");
 	/// ```
-	fn values(self) -> Result<Vec<T>, ConfigError>;
+	/// FIXME: Fix Documentation
+	fn values<R: RangeBounds<usize>>(self, range: R) -> Result<Vec<T>, ConfigError>;
+}
+
+fn values_out_of_range<T: FromStr, R: std::ops::RangeBounds<usize>>(mut item: TypedItem<T>, range: R) -> Result<Vec<T>, ConfigError> {
+	item.0.values.drain(range).map(|r| Rc::try_unwrap(r).map(|v| v.value).map_err(|_| ConfigError::MultipleReferences)).collect()
 }
 
 impl <T: FromStr> ValueExtractor<T> for Result<TypedItem<T>, ConfigError> {
@@ -330,19 +336,32 @@ impl <T: FromStr> ValueExtractor<T> for Result<TypedItem<T>, ConfigError> {
 		match ci.values.len() {
 			0 => Err(ConfigError::ValueNotFound(ci.key)),
 			1 => Rc::try_unwrap(ci.values.pop().unwrap()).map(|v| v.value).map_err(|_| ConfigError::MultipleReferences),
-			_ => Err(ConfigError::TooManyValues(ci.key, ci.values.iter().map(|v| v.source()).collect()))
+			_ => Err(ConfigError::TooManyValues(1, ci.key, ci.values.iter().map(|v| v.source()).collect()))
 		}
 	}
 
-	fn values(self) -> Result<Vec<T>, ConfigError> {
+	fn values<R: std::ops::RangeBounds<usize>>(self, range: R) -> Result<Vec<T>, ConfigError> {
 		// This match converts a ValueNotFound error into an empty vector.
 		// This makes sure that an empty value-vectors is equvalent with an ValueNotFound error for all purposes.
 		match self {
-			Ok(mut item) => item.0.values.drain(..).map(|r| Rc::try_unwrap(r).map(|v| v.value).map_err(|_| ConfigError::MultipleReferences)).collect(),
+			Ok(item) => values_out_of_range(item, range),
 			Err(ConfigError::ValueNotFound(_)) => Ok(Vec::default()),
 			Err(error) => Err(error)
 		}
 	}
+
+	/*fn values_lim(self, min_num: Option<usize>, max_num: Option<usize>) -> Result<Vec<T>, ConfigError> {
+		let mut ci = self?.0;
+
+		if let Some(max_num) = max_num {
+			if ci.values.len() > max_num {
+				let over_item = Rc::try_unwrap(ci.values.drain(max_num..).map(|v| v.source).map_err(|_| ConfigError::MultipleReferences)?;
+				return Err(ConfigError::TooManyValues(max_num, ci.key, over_item));
+			}
+		}
+
+		self.values()
+	}*/
 }
 
 impl <T: FromStr> ValueExtractor<T> for Result<StringItem, ConfigError> where T::Err: Error + 'static {
@@ -354,8 +373,8 @@ impl <T: FromStr> ValueExtractor<T> for Result<StringItem, ConfigError> where T:
 		(self.try_into() as Result<TypedItem<T>, ConfigError>).value()
 	}
 
-	fn values(self) -> Result<Vec<T>, ConfigError> {
-		(self.try_into() as Result<TypedItem<T>, ConfigError>).values()
+	fn values<R: RangeBounds<usize>>(self, range: R) -> Result<Vec<T>, ConfigError> {
+		(self.try_into() as Result<TypedItem<T>, ConfigError>).values(range)
 	}
 }
 
@@ -425,7 +444,7 @@ mod tests {
 	fn values_no_value() {
 		let c = prepare_test_config();
 
-		let values: Vec<String> = c.get(c.root().push_all(&["no_value"])).values().unwrap();
+		let values: Vec<String> = c.get(c.root().push_all(&["no_value"])).values(..).unwrap();
 		assert_eq!(values.len(), 0);
 	}
 
@@ -433,7 +452,7 @@ mod tests {
 	fn values_one_value() {
 		let c = prepare_test_config();
 
-		let mut values: Vec<String> = c.get(c.root().push_all(&["one_value"])).values().unwrap();
+		let mut values: Vec<String> = c.get(c.root().push_all(&["one_value"])).values(..).unwrap();
 		assert_eq!(values.len(), 1);
 		assert_eq!(values.pop().unwrap(), "one_value");
 	}
@@ -442,7 +461,7 @@ mod tests {
 	fn values_two_values() {
 		let c = prepare_test_config();
 
-		let mut values: Vec<String> = c.get(c.root().push_all(&["two_values"])).values().unwrap();
+		let mut values: Vec<String> = c.get(c.root().push_all(&["two_values"])).values(..).unwrap();
 		assert_eq!(values.len(), 2);
 		assert_eq!(values.pop().unwrap(), "two_values");
 		assert_eq!(values.pop().unwrap(), "two_values");

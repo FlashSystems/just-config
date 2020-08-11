@@ -8,11 +8,14 @@ use std::rc::Rc;
 pub enum ConfigError {
 	/// A required configuration value was not found.
 	ValueNotFound(ConfPath),
+	//FIXME: Fix doc
 	/// If [`value()`](../item/trait.ValueExtractor.html#tymethod.value) is
 	/// called on an item that has more that one value. The location of the error
 	/// is represented by an instance of a struct implementing the
 	/// [`SourceLocation'](../item/trait.SourceLocation.html) trait.
-	TooManyValues(ConfPath, Vec<Rc<dyn SourceLocation>>),
+	TooManyValues(usize, ConfPath, Vec<Rc<dyn SourceLocation>>),
+	//FIXME: Fix doc
+	NotEnoughValues(usize, ConfPath),
 	/// This error is returned if the conversion of the string value into a
 	/// typed value failed or if a processor/validator returns an error.
 	/// The location of the error is represented by an instance of a struct
@@ -24,8 +27,8 @@ pub enum ConfigError {
 	MultipleReferences
 }
 
-fn too_many_values_formater(f: &mut std::fmt::Formatter, key: &ConfPath, source_locations: &[Rc<dyn SourceLocation>]) -> std::fmt::Result {
-	write!(f, "More than one value found for key {}@[", key)?;
+fn too_many_values_formater(f: &mut std::fmt::Formatter, max_num: usize, key: &ConfPath, source_locations: &[Rc<dyn SourceLocation>]) -> std::fmt::Result {
+	write!(f, "More than {} value found for key {}@[", max_num, key)?;
 	for (i, source_location) in source_locations.iter().enumerate() {
 		if i > 0 {
 			write!(f, ", ")?;
@@ -40,7 +43,8 @@ impl std::fmt::Display for ConfigError {
 	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
 		match self {
 			Self::ValueNotFound(key) => write!(f, "Missing value for config key '{}'.", key),
-			Self::TooManyValues(key, source_locations) => too_many_values_formater(f, key, source_locations),
+			Self::TooManyValues(max_num, key, source_locations) => too_many_values_formater(f, *max_num, key, source_locations),
+			Self::NotEnoughValues(min_num, key) => write!(f, "Key '{}' must have at least {} values.", key, min_num),
 			Self::ValueError(error, source_location) => write!(f, "{}@'{}'", error, source_location),
 			Self::MultipleReferences => write!(f, "Internal error. Multiple references to same config pipeline.")
 		}

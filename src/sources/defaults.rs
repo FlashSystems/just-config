@@ -198,7 +198,7 @@ mod tests {
 		c.add_source(d);
 
 		assert_eq!((c.get(ConfPath::from(&["testA"])).value() as Result<String, ConfigError>).unwrap(), "AaA");
-		assert_eq!((c.get(ConfPath::from(&["testB"])).values() as Result<Vec<String>, ConfigError>).unwrap(), ["BbB", "bBb"]);
+		assert_eq!((c.get(ConfPath::from(&["testB"])).values(..) as Result<Vec<String>, ConfigError>).unwrap(), ["BbB", "bBb"]);
 		assert_eq!((c.get(ConfPath::from(&["testC"])).value() as Result<String, ConfigError>).unwrap(), "CcC");
 		assert_eq!((c.get(ConfPath::from(&["testD"])).value() as Result<String, ConfigError>).unwrap(), "DdD");
 		assert_eq!((c.get(ConfPath::from(&["testE"])).value() as Result<String, ConfigError>).unwrap(), "EeE");
