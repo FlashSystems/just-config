@@ -98,13 +98,14 @@
 //! let num_frobs: i32 = conf.get(conf.root().push("num_frobs")).max(10).value()?;
 //!
 //! // Read a list of tags from the configuration file.
-//! let tag_list: Vec<String> = conf.get(conf.root().push("tags")).values()?;
+//! let tag_list: Vec<String> = conf.get(conf.root().push("tags")).values(..)?;
 //!
 //! // Read the paths from the config file and allow it to be overriden by
 //! // the environment variable. We split everything at `:` to allow passing
 //! // multiple paths using an environment variable. When read from the config
 //! // file, multiple values can be set without using the `:` delimiter.
-//! let search_paths: Vec<String> = conf.get(conf.root().push("searchPath")).explode(':').values()?;
+//! // Passing 1.. to values() makes sure at least one search path is set.
+//! let search_paths: Vec<String> = conf.get(conf.root().push("searchPath")).explode(':').values(1..)?;
 //!
 //! # // Hide the error thrown by ?
 //! # Ok::<(), justconfig::error::ConfigError>(())
