@@ -8,13 +8,21 @@ use std::rc::Rc;
 pub enum ConfigError {
 	/// A required configuration value was not found.
 	ValueNotFound(ConfPath),
-	//FIXME: Fix doc
 	/// If [`value()`](../item/trait.ValueExtractor.html#tymethod.value) is
-	/// called on an item that has more that one value. The location of the error
+	/// called on an item that has more that one value or if the number of
+	/// values on a call to 
+	/// [`values()`](../item/trait.ValueExtractor.html#tymethod.values) is out
+	/// of range this error is returned. The location of the error
 	/// is represented by an instance of a struct implementing the
-	/// [`SourceLocation'](../item/trait.SourceLocation.html) trait.
+	/// [`SourceLocation'](../item/trait.SourceLocation.html) trait. The first
+	/// parameter contains the maximum number of values this configuration item
+	/// can have.
 	TooManyValues(usize, ConfPath, Vec<Rc<dyn SourceLocation>>),
-	//FIXME: Fix doc
+	/// If [`values()`](../item/trait.ValueExtractor.html#tymethod.values) is
+	/// called with a range restricting the valid number of values and there are
+	/// not enough values this error is returned. The first parameter is
+	/// the minimum number of values that this configuration item must contain
+	/// to be valid.
 	NotEnoughValues(usize, ConfPath),
 	/// This error is returned if the conversion of the string value into a
 	/// typed value failed or if a processor/validator returns an error.
