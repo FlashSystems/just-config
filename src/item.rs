@@ -249,7 +249,7 @@ pub trait ValueExtractor<T: FromStr> {
 	///
 	/// This method should be used to return optional configuration values.
 	/// A default value can be provided by using `unwrap_or`.
-	/// 
+	///
 	/// ## Example
 	///
 	/// ```rust
@@ -274,7 +274,7 @@ pub trait ValueExtractor<T: FromStr> {
 	///
 	/// This method should be used to return mandatory configuration values that
 	/// should result in an error if they are not found.
-	/// 
+	///
 	/// ## Example
 	///
 	/// ```rust
@@ -297,9 +297,9 @@ pub trait ValueExtractor<T: FromStr> {
 	/// This is the only method that allows more than one configuration value
 	/// to exist. Use this method to read multi value items. If the
 	/// configuration item does not exist, an empty array is returned.
-	/// 
+	///
 	/// ## Example
-	/// 
+	///
 	/// ```rust
 	/// # use justconfig::Config;
 	/// # use justconfig::ConfPath;
@@ -318,7 +318,39 @@ pub trait ValueExtractor<T: FromStr> {
 }
 
 fn values_out_of_range<T: FromStr, R: std::ops::RangeBounds<usize>>(mut item: TypedItem<T>, range: R) -> Result<Vec<T>, ConfigError> {
-	item.0.values.drain(range).map(|r| Rc::try_unwrap(r).map(|v| v.value).map_err(|_| ConfigError::MultipleReferences)).collect()
+	let num_items = item.0.values.len();
+
+	if range.contains(&num_items) {
+		item.0.values.drain(..).map(|r| Rc::try_unwrap(r).map(|v| v.value).map_err(|_| ConfigError::MultipleReferences)).collect()
+	} else {
+		// The number of items is not part of the range. Check if the upper or lower bound
+		// was violated.
+		// The lower limit is inclusive, the upper is exlusive. This is done to make sure
+		// we do not underflow the unsigned value.
+		let lower_limit_inc = match range.start_bound() {
+			std::ops::Bound::Included(min) => Some(*min),
+			std::ops::Bound::Excluded(min) => Some(*min + 1),
+			std::ops::Bound::Unbounded => None
+		};
+
+		let upper_limit_excl = match range.end_bound() {
+			std::ops::Bound::Included(max) => Some(*max + 1),
+			std::ops::Bound::Excluded(max) => Some(*max),
+			std::ops::Bound::Unbounded => None
+		};
+
+		if lower_limit_inc.is_some() && (num_items < lower_limit_inc.unwrap()) {
+			// Lower bound violated
+			Err(ConfigError::NotEnoughValues(lower_limit_inc.unwrap(), item.0.key))
+		} else if upper_limit_excl.is_some() && (num_items >= upper_limit_excl.unwrap()) {
+			// Upper bound violated
+			let surplus_sources = item.0.values.drain(upper_limit_excl.unwrap()..).map(|r| Rc::try_unwrap(r).map(|v| v.source).map_err(|_| ConfigError::MultipleReferences)).collect();
+
+			Err(ConfigError::TooManyValues(upper_limit_excl.unwrap().saturating_sub(1), item.0.key, surplus_sources))
+		} else {
+			unreachable!("This is not possible because we checked that num_items is not contained in range.");
+		}
+	}
 }
 
 impl <T: FromStr> ValueExtractor<T> for Result<TypedItem<T>, ConfigError> {
