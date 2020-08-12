@@ -5,12 +5,22 @@
 
 # Config Library for Rust
 
-Just-config is a configuration library for rust. It strives for the old Unix matra "Do one thing and to it well". It's just build to read configuration values from different sources and fuse them into an easy to handle configuration source. It primary purpose is to go into a configuration class and populate the different, typed configuration values.
+Just-config is a configuration library for rust. It strives for the old Unix matra "Do one thing and to it well". It's just build to read configuration values from different sources and fuse them into an easy to handle configuration source. It primary purpose is to be used by a configuration class and populate the different, typed configuration values.
+
+Out of the box it features the following configuration sources:
+
+* Static (fallbacks, command line)
+* Environment variables
+* Configuration file
+
+It has built in validation support and can accept multiple configuration values per key. It even can limit the number of configuration values that are acceptible for a given configuration key.
+
+Writing your own configuration sources (for example for etcd) is really easy. You only have to implement the `get` method of the [`Source` trait](https://docs.rs/justconfig/latest/justconfig/source/trait.Source.html).
 
 If you just want to use this library, open the documentation, look at the examples and descriptions and start using it by adding the following to the `[dependencies]` section of your `Cargo.toml`:
 
 ```toml
-config = "0.8"
+config = "0.9"
 ```
 
 ## Basic example
@@ -30,30 +40,37 @@ use justconfig::item::ValueExtractor;
 use std::ffi::OsStr;
 use std::fs::File;
 let mut conf = Config::default();
-
 // Allow some environment variables to override configuration values read
 // from the configuration file.
 let config_env = Env::new(&[
   (ConfPath::from(&["searchPath"]), OsStr::new("SEARCH_PATH")),
 ]);
-
 // Open the configuration file
 let config_file = File::open("myconfig.conf").expect("Could not open config file.");
 conf.add_source(ConfigText::new(config_file, "myconfig.conf").expect("Loading configuration file failed."));
-
 // Read the value `num_frobs` from the configuration file.
 // Do not allow to use more than 10 frobs.
 let num_frobs: i32 = conf.get(conf.root().push("num_frobs")).max(10).value()?;
-
 // Read a list of tags from the configuration file.
-let tag_list: Vec<String> = conf.get(conf.root().push("tags")).values()?;
-
+let tag_list: Vec<String> = conf.get(conf.root().push("tags")).values(..)?;
 // Read the paths from the config file and allow it to be overriden by
 // the environment variable. We split everything at `:` to allow passing
 // multiple paths using an environment variable. When read from the config
 // file, multiple values can be set without using the `:` delimiter.
-let search_paths: Vec<String> = conf.get(conf.root().push("searchPath")).explode(':').values()?;
+// Passing 1.. to values() makes sure at least one search path is set.
+let search_paths: Vec<String> = conf.get(conf.root().push("searchPath")).explode(':').values(1..)?;
 ```
+
+## Changelog
+
+* Version 0.8.0
+  Initial Release
+
+* Version 0.8.1
+  Add some more examples
+
+* Version 0.9.0
+  **Breaking change**: Added range syntax for configuration values and range validation. All occurences of `values()` and `between()` must be updated. The error handling for validation errors of the `between`-validator has changes as well.
 
 ## Design rational
 

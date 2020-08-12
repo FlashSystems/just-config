@@ -107,7 +107,7 @@ impl Explode for Result<StringItem, ConfigError> {
 	/// defaults.set(conf.root().push_all(&["splitme"]), "1,2,3", "source info");
 	/// conf.add_source(defaults);
 	///
-	/// let values: Vec<u32> = conf.get(ConfPath::from(&["splitme"])).explode(',').values().unwrap();
+	/// let values: Vec<u32> = conf.get(ConfPath::from(&["splitme"])).explode(',').values(..).unwrap();
 	///
 	/// assert_eq!(values.len(), 3);
 	/// assert_eq!(values[0], 1);
@@ -312,7 +312,7 @@ impl NotEmpty for Result<StringItem, ConfigError> {
 	/// defaults.put(conf.root().push_all(&["myitem"]), "def", "source info");
 	/// conf.add_source(defaults);
 	///
-	/// let values: Vec<String> = conf.get(ConfPath::from(&["myitem"])).not_empty().values().unwrap();
+	/// let values: Vec<String> = conf.get(ConfPath::from(&["myitem"])).not_empty().values(..).unwrap();
 	///
 	/// assert_eq!(values.len(), 2);
 	/// assert_eq!(values[0], "abc");

@@ -148,7 +148,7 @@ impl Defaults {
 	/// let destination: String = conf.get(ConfPath::from(&["Destination"])).value().unwrap();
 	/// assert_eq!(destination, "/tmp");
 	/// 
-	/// let sources: Vec<String> = conf.get(ConfPath::from(&["Sources"])).values().unwrap();
+	/// let sources: Vec<String> = conf.get(ConfPath::from(&["Sources"])).values(1..).unwrap();
 	/// assert_eq!(sources, ["/srv/source/a", "/srv/source/b"]);
 	/// ```
 	pub fn put(&mut self, key: ConfPath, value: &str, source: &str) {
