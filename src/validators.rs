@@ -98,6 +98,7 @@ use std::fmt;
 use std::error::Error;
 use std::str::FromStr;
 use std::convert::TryInto;
+use std::ops::RangeBounds;
 
 use crate::error::ConfigError;
 use crate::item::{StringItem, TypedItem};
@@ -107,21 +108,51 @@ pub enum ValidatorError {
 	Empty,
 	BelowMinimum(String),
 	AboveMaximum(String),
-	NotBetween(String, String)
+	NotInRange(Option<String>, Option<String>)
 }
 
 impl fmt::Display for ValidatorError {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		match self {
 			Self::Empty => write!(f, "must not be empty."),
-			Self::BelowMinimum(min) => write!(f, "must be at least {}.", min),
-			Self::AboveMaximum(max) => write!(f, "must be at most {}.", max),
-			Self::NotBetween(min, max) => write!(f, "must be at least {} and at most {}.", min, max)
+			Self::BelowMinimum(min) => write!(f, "must be >= {}.", min),
+			Self::AboveMaximum(max) => write!(f, "must be <= {}.", max),
+			Self::NotInRange(start, end) => {
+				write!(f, "must be ")?;
+				if let Some(start) = start {
+					write!(f, "{}.", start)?;
+				}
+				if start.is_some() && end.is_some() {
+					write!(f, " and ")?;
+				}
+				if let Some(end) = end {
+					write!(f, "{}.", end)?;
+				}
+				Ok(())
+			}
 		}
 	}
 }
 
 impl Error for ValidatorError {
+}
+
+impl ValidatorError {
+	fn from_range<T: fmt::Display, R: RangeBounds<T>>(range: &R) -> Self {
+		let start = match range.start_bound() {
+			std::ops::Bound::Included(v) => { Some(format!(">= {}", v)) },
+			std::ops::Bound::Excluded(v) => { Some(format!("> {}", v)) },
+			std::ops::Bound::Unbounded => { None}
+		};
+
+		let end = match range.end_bound() {
+			std::ops::Bound::Included(v) => { Some(format!("<= {}", v)) },
+			std::ops::Bound::Excluded(v) => { Some(format!("< {}", v)) },
+			std::ops::Bound::Unbounded => { None }
+		};
+
+		Self::NotInRange(start, end)
+	}
 }
 
 /// Validates if a configuration value is within range by using the
@@ -130,7 +161,7 @@ impl Error for ValidatorError {
 pub trait Range<T: FromStr + PartialOrd + fmt::Display> {
 	fn min(self, minimum: T) -> Result<TypedItem<T>, ConfigError>;
 	fn max(self, maximum: T) -> Result<TypedItem<T>, ConfigError>;
-	fn between(self, minimum: T, maximum: T) -> Result<TypedItem<T>, ConfigError>;
+	fn in_range<R: RangeBounds<T>>(self, range: R) -> Result<TypedItem<T>, ConfigError>;
 }
 
 impl <T: FromStr + PartialOrd + fmt::Display> Range<T> for Result<TypedItem<T>, ConfigError> {
@@ -202,10 +233,9 @@ impl <T: FromStr + PartialOrd + fmt::Display> Range<T> for Result<TypedItem<T>, 
 
 	/// Makes sure that the configuration value is within a specified range.
 	///
-	/// Uses the
-	/// [`PartialOrd`](https://doc.rust-lang.org/std/cmp/trait.PartialOrd.html)
-	/// trait to make sure the configured value is between the specified values
-	/// including these values.
+	/// Uses an implementaiton of the
+	/// [`range`](https://doc.rust-lang.org/std/ops/struct.Range.html) trait to
+	/// check if the configured value is within range.
 	///
 	/// ## Example
 	///
@@ -222,13 +252,13 @@ impl <T: FromStr + PartialOrd + fmt::Display> Range<T> for Result<TypedItem<T>, 
 	/// conf.add_source(defaults);
 	///
 	/// // This will succeed because 10 is between 5 and 20.
-	/// let value: i32 = conf.get(ConfPath::from(&["myitem"])).between(5, 20).value().unwrap();
+	/// let value: i32 = conf.get(ConfPath::from(&["myitem"])).in_range(5..=20).value().unwrap();
 	/// ```
-	fn between(self, minimum: T, maximum: T) -> Result<TypedItem<T>, ConfigError> {
-		self?.filter(|v| if *v < minimum || *v > maximum {
-				Err(Box::new(ValidatorError::NotBetween(format!("{}", minimum), format!("{}", maximum))))
-			} else {
+	fn in_range<R: RangeBounds<T>>(self, range: R) -> Result<TypedItem<T>, ConfigError> {
+		self?.filter(|v| if range.contains(v) {
 				Ok(())
+			} else {
+				Err(Box::new(ValidatorError::from_range(&range)))
 			}
 		)
 	}
@@ -243,8 +273,8 @@ impl <T: FromStr + PartialOrd + fmt::Display> Range<T> for Result<StringItem, Co
 		(self.try_into() as Result<TypedItem<T>, ConfigError>).max(maximum)
 	}
 
-	fn between(self, minimum: T, maximum: T) -> Result<TypedItem<T>, ConfigError> {
-		(self.try_into() as Result<TypedItem<T>, ConfigError>).between(minimum, maximum)
+	fn in_range<R: RangeBounds<T>>(self, range: R) -> Result<TypedItem<T>, ConfigError> {
+		(self.try_into() as Result<TypedItem<T>, ConfigError>).in_range(range)
 	}
 }
 
@@ -281,11 +311,11 @@ mod tests {
 		assert_eq!(c.get(ConfPath::from(&["neg_one"])).max(0).value().unwrap(), -1i32);
 
 		// Test between
-		assert_eq!(c.get(ConfPath::from(&["ten"])).between(0, 10).value().unwrap(), 10u32);
-		assert_eq!(c.get(ConfPath::from(&["ten"])).between(10, 10).value().unwrap(), 10u32);
-		assert_eq!(c.get(ConfPath::from(&["five"])).between(0, 10).value().unwrap(), 5u32);
-		assert_eq!(c.get(ConfPath::from(&["zero"])).between(-10, 10).value().unwrap(), 0i32);
-		assert_eq!(c.get(ConfPath::from(&["neg_one"])).between(-1, 0).value().unwrap(), -1i32);
+		assert_eq!(c.get(ConfPath::from(&["ten"])).in_range(0..=10).value().unwrap(), 10u32);
+		assert_eq!(c.get(ConfPath::from(&["ten"])).in_range(10..11).value().unwrap(), 10u32);
+		assert_eq!(c.get(ConfPath::from(&["five"])).in_range(0..=10).value().unwrap(), 5u32);
+		assert_eq!(c.get(ConfPath::from(&["zero"])).in_range(-10..=10).value().unwrap(), 0i32);
+		assert_eq!(c.get(ConfPath::from(&["neg_one"])).in_range(-1..=0).value().unwrap(), -1i32);
 	}
 
 	#[test]
@@ -313,7 +343,7 @@ mod tests {
 	}
 
 	#[test]
-	#[should_panic(expected = "NotBetween")]
+	#[should_panic(expected = "NotInRange")]
 	fn range_between_bad_lower() {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
@@ -321,11 +351,11 @@ mod tests {
 		d.set(c.root().push_all(&["ten"]), "10", "10");
 		c.add_source(d);
 
-		let _: u32 = c.get(ConfPath::from(&["ten"])).between(20, 30).value().unwrap();
+		let _: u32 = c.get(ConfPath::from(&["ten"])).in_range(20..30).value().unwrap();
 	}
 
 	#[test]
-	#[should_panic(expected = "NotBetween")]
+	#[should_panic(expected = "NotInRange")]
 	fn range_between_bad_upper() {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
@@ -333,6 +363,6 @@ mod tests {
 		d.set(c.root().push_all(&["ten"]), "10", "10");
 		c.add_source(d);
 
-		let _: u32 = c.get(ConfPath::from(&["ten"])).between(0, 5).value().unwrap();
+		let _: u32 = c.get(ConfPath::from(&["ten"])).in_range(0..5).value().unwrap();
 	}
 }
