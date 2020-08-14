@@ -297,7 +297,7 @@ pub trait ValueExtractor<T: FromStr> {
 	/// This is the only method that allows more than one configuration value
 	/// to exist. Use this method to read multi value items. If the
 	/// configuration item does not exist, an empty array is returned.
-	/// 
+	///
 	/// The method accepts a range to specify the which number of configuration
 	/// values is valid. If any number of configuration values is acceptible,
 	/// just specify `..`. If only a limited number of values is valid, specify
@@ -318,10 +318,10 @@ pub trait ValueExtractor<T: FromStr> {
 	/// #
 	/// let myvalue: Vec<u32> = conf.get(ConfPath::from(&["myvalue"])).values(..).expect("Error");
 	/// ```
-	/// 
+	///
 	/// If there must be at least one instance of `myvalue` specify a range of
 	/// `1..`:
-	/// 
+	///
 	/// ```rust
 	/// # use justconfig::Config;
 	/// # use justconfig::ConfPath;
@@ -335,15 +335,15 @@ pub trait ValueExtractor<T: FromStr> {
 	/// #
 	/// let myvalue: Vec<u32> = conf.get(ConfPath::from(&["myvalue"])).values(1..).expect("Error");
 	/// ```
-	/// 
+	///
 	/// If the number of values should be limited to at most 3 values the range
 	/// must be `..=3`.
-	/// 
+	///
 	fn values<R: RangeBounds<usize>>(self, range: R) -> Result<Vec<T>, ConfigError>;
 }
 
 #[allow(clippy::unnecessary_unwrap)] // Until https://github.com/rust-lang/rfcs/pull/2497 gets implemented
-fn values_out_of_range<T: FromStr, R: std::ops::RangeBounds<usize>>(mut item: TypedItem<T>, range: R) -> Result<Vec<T>, ConfigError> {
+fn values_out_of_range<T: FromStr, R: RangeBounds<usize>>(mut item: TypedItem<T>, range: R) -> Result<Vec<T>, ConfigError> {
 	let num_items = item.0.values.len();
 
 	if range.contains(&num_items) {
@@ -399,7 +399,7 @@ impl <T: FromStr> ValueExtractor<T> for Result<TypedItem<T>, ConfigError> {
 		}
 	}
 
-	fn values<R: std::ops::RangeBounds<usize>>(self, range: R) -> Result<Vec<T>, ConfigError> {
+	fn values<R: RangeBounds<usize>>(self, range: R) -> Result<Vec<T>, ConfigError> {
 		// This match converts a ValueNotFound error into an empty vector.
 		// This makes sure that an empty value-vectors is equvalent with an ValueNotFound error for all purposes.
 		match self {
@@ -519,7 +519,7 @@ mod tests {
 
 		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(3..) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'two_values\' must have at least 3 values.");
 		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(4..5) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'two_values\' must have at least 4 values.");
-	}	
+	}
 
 	#[test]
 	fn range_upper_limit() {
@@ -527,7 +527,7 @@ mod tests {
 
 		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(..=1) as Result<Vec<String>, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.2']");
 		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(1..=1) as Result<Vec<String>, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.2']");
-	}	
+	}
 
 	#[test]
 	fn range_ok() {
