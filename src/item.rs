@@ -298,10 +298,10 @@ pub trait ValueExtractor<T: FromStr> {
 	/// to exist. Use this method to read multi value items. If the
 	/// configuration item does not exist, an empty array is returned.
 	///
-	/// The method accepts a range to specify the which number of configuration
-	/// values is valid. If any number of configuration values is acceptible,
-	/// just specify `..`. If only a limited number of values is valid, specify
-	/// a range.
+	/// The method accepts a range to specify how many configuration values can
+	/// be set for this item. If any number of configuration values are
+	/// acceptible, just specify `..`. If the number of values should be
+	/// limited, specify a range.
 	///
 	/// ## Example
 	///

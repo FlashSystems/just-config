@@ -7,6 +7,9 @@
 //! * If you want to read a configuration file created by your user: yes
 //! * If you want to flexibly process the information read from a configuration
 //!   file: yes
+//! * If you want to add environment variables or constants (command line
+//!   parameters) to the mix: yes
+//! * If you want an easy way to merge multiple ocnfiguration sources: yes
 //! * If you want to add defaults or environment variables: yes
 //! * If you want to read _and_ write a configuration file: no
 //! * If you want your configuration file to specify data types: no
@@ -40,6 +43,12 @@
 //!
 //! There are some [configuration sources already included](sources/index.html)
 //! in just-config.
+//!
+//! Multiple configuration sources can be registered. They are tried in order of
+//! their registration. The first configuration source that returns a value for
+//! a configuration key is used. That way configuration sources can be layered.
+//! See [`add_source`](struct.Config.html#method.add_source) for more
+//! information and an example.
 //!
 //! ### Processors
 //!
