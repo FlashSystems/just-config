@@ -72,6 +72,10 @@ let search_paths: Vec<String> = conf.get(conf.root().push("searchPath")).explode
 * Version 0.9.0\
   **Breaking change**: Added range syntax for configuration values and range validation. All occurences of `values()` and `between()` must be updated. The error handling for validation errors of the `between`-validator has changes as well.
 
+* Version 0.9.1\
+  Added the `stack_config` function to the `text` source module. This function makes merging
+  configuration files from multiple source paths easier.
+
 ## Design rational
 
 If you are interested about the rationale behind the design of this library (and can stand some highly opinionated reasoning) you can read on.

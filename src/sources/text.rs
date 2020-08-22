@@ -22,6 +22,14 @@
 //! The name of the configuration source must be passed as a second parameter. It
 //! is used to create nice error messages to show to the user.
 //! 
+//! ## Stacking configuration files
+//! 
+//! To search for configuration information in multiple directories the convenience
+//! function [`stack_config`](fn.stack_config.html) is provided. It
+//! merges all found configuration files allowing parts of a default configuration
+//! file to be overwritten by more specific configuration files in other
+//! directories.
+//! 
 //! ## Configuration Format
 //! 
 //! The configuration consists primarily of key-value-pairs. On a normal configuration
@@ -148,8 +156,12 @@
 use crate::source::Source;
 use crate::item::{SourceLocation, StringItem, Value};
 use crate::confpath::ConfPath;
+use crate::Config;
 
 use std::io::{Read, BufRead, BufReader};
+use std::path::Path;
+use std::fs::File;
+use std::ffi::OsString;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::fmt;
@@ -386,6 +398,60 @@ impl Source for ConfigText {
 	}
 }
 
+/// Helper function for config file stacking.
+///
+/// This function is a helper to allow searching for a configuration file in
+/// multiple directories. Often a default configuration is supplied by the
+/// distribution within `/usr/share/mypackage` and the administrator can
+/// override some settings by supplying a configuration file in `/etc`. Maybe
+/// even the user should be able to change some configuration options by having
+/// a third configuration file within its home directory.
+///
+/// This helper function searches the given list of paths in the supplied order
+/// and adds every configuration file as a configuration source. That way the
+/// configuration files are merged by the rules stated in
+/// [`addSource`](../../struct.Config.html#method.add_source).
+///
+/// The `config_path` parameter allows you to borrow a
+/// [`ConfPath`](../../struct.ConfPath.html) instance to the function. This instnace
+/// will be used to store all configuration values for enumeration. See
+/// [Enumerating keys](../../index.html#enumerating-keys) for details.
+///
+/// ## Example
+///
+/// ```rust
+/// # use std::path::Path;
+/// # use std::ffi::OsString;
+/// # use justconfig::Config;
+/// # use justconfig::sources::text::{ConfigText, stack_config};
+///
+/// // Define the search path.
+/// let paths: [&Path; 3] = [
+///   &Path::new("/usr/share/myapp/etc"),
+///   &Path::new("/etc"),
+///   &Path::new(env!("HOME")).join(".config").join("myapp")
+/// ];
+///
+/// let mut config = Config::default();
+/// stack_config(&mut config, None, &OsString::from("myapp.conf"), &paths[..]).unwrap();
+/// ```
+pub fn stack_config(config: &mut Config, config_path: Option<&mut ConfPath>, file_name: &OsString, paths: &[&Path]) -> Result<(), Error>{
+	let file_name = Path::new(file_name);
+
+	for &path in paths {
+		let this_path = path.join(file_name);
+		if let Ok(config_file) = File::open(&this_path) {
+			if let Some(config_path) = &config_path {
+				config.add_source(ConfigText::with_path(config_file, &this_path.to_string_lossy(), *config_path)?);
+			} else {
+				config.add_source(ConfigText::new(config_file, &this_path.to_string_lossy())?);
+			}
+		}
+	}
+
+	Ok(())
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -476,5 +542,44 @@ Key without value
 "#;
 
 		let _ = ConfigText::new(config_file.as_bytes(), "myfile").unwrap();
+	}
+
+	#[test]
+	fn stack() {
+		let paths: [&Path; 3] = [
+			&Path::new(env!("CARGO_MANIFEST_DIR")).join("testdata").join("p1"),
+			&Path::new(env!("CARGO_MANIFEST_DIR")).join("testdata").join("p_non"),
+			&Path::new(env!("CARGO_MANIFEST_DIR")).join("testdata").join("p2")
+		];
+
+		let mut config = Config::default();
+		stack_config(&mut config, None, &OsString::from("test.conf"), &paths[..]).unwrap();
+
+		assert_eq!((config.get(ConfPath::from(["key_p1"])).value() as Result<String, ConfigError>).unwrap(), "p1");
+		assert_eq!((config.get(ConfPath::from(["key_p2"])).value() as Result<String, ConfigError>).unwrap(), "p2");
+		assert_eq!((config.get(ConfPath::from(["key_p1_p2"])).value() as Result<String, ConfigError>).unwrap(), "p1");
+	}
+
+	#[test]
+	fn stack_with_path() {
+		let paths: [&Path; 3] = [
+			&Path::new(env!("CARGO_MANIFEST_DIR")).join("testdata").join("p1"),
+			&Path::new(env!("CARGO_MANIFEST_DIR")).join("testdata").join("p_non"),
+			&Path::new(env!("CARGO_MANIFEST_DIR")).join("testdata").join("p2")
+		];
+
+		let mut config = Config::default();
+		let mut cp = ConfPath::default();
+		stack_config(&mut config, Some(&mut cp), &OsString::from("test.conf"), &paths[..]).unwrap();
+
+		// Check that all children are there.
+		// The iterator is not sorted so we've to sort later.
+		let mut key_names: Vec<_> = cp.children().map(|c| String::from(c.tail_component_name().unwrap())).collect();
+		key_names.sort();
+
+		assert_eq!(key_names.len(), 3);
+		assert_eq!(key_names[0], "key_p1");
+		assert_eq!(key_names[1], "key_p1_p2");
+		assert_eq!(key_names[2], "key_p2");
 	}
 }
