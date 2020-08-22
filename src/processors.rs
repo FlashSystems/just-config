@@ -533,17 +533,27 @@ impl Subst for Result<StringItem, ConfigError> {
 		})
 	}
 
-	/// Call this method to substitute placeholders with an application defined value.
+	/// Call this method to substitute placeholders with an application defined
+	/// value.
 	///
-	/// For a general description see the [`env`](#method.env) method. This method
-	/// is more general than `env` as it allows the characters enclosing the variable
-	/// to be set and uses a callback to supply the value that should be substituted.
+	/// For a general description see the [`env`](#method.env) method. This
+	/// method is more general than `env` as it allows the characters enclosing
+	/// the variable to be set and uses a callback to supply the value that
+	/// should be substituted.
+	///
+	/// Because this function allows the enclosing characters to be set
+	/// different substitutions can be used for different sources of the
+	/// substituted value. For example `${}` can be sued for environment
+	/// variable substitution and `$()` could be used for substitution for a
+	/// secondary configuration file.
+	/// 
+	/// The `$` character as the start marker can not be changed.
 	///
 	/// ## Example
 	///
-	/// This example emulates the [`env`](#method.env) method but returns an error
-	/// if the environment variable is not found. In addition it replaces the
-	/// curly brackets used by the `env` method with round ones.
+	/// This example emulates the [`env`](#method.env) method but returns an
+	/// error if the environment variable is not found. In addition it replaces
+	/// the curly brackets used by the `env` method with round ones.
 	///
 	/// ```rust
 	/// # use std::error::Error;
