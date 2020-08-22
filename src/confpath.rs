@@ -293,9 +293,9 @@ impl ConfPath {
 		self.data.name.as_deref()
 	}
 
-	/// Returns an iterator that enummerates the components of the path.
+	/// Returns an iterator that enumerates the components of the path.
 	///
-	/// The itereator returns the components first to last.
+	/// The iterator returns the components first to last.
 	/// Starting with the component directly below the root of the tree.
 	pub fn iter(&self) -> impl Iterator<Item=Self> {
 		self.clone().into_iter()
