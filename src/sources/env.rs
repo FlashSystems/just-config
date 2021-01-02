@@ -7,7 +7,7 @@
 //!
 //! The environment source uses a mapping to translate the names of environment
 //! variables into configuration paths. This mapping is passed to the
-//! [`new`](struct.Env.html#method.new) method. Environment variables not present within this
+//! [`new`](Env::new) method. Environment variables not present within this
 //! mapping are inaccessible by the configuration system. Adding a mapping for
 //! an environment variable does *not* make sure it really exists.
 //! 
@@ -78,7 +78,7 @@ impl Env {
 	/// configuration path of the environment value and the second element defines
 	/// the name of the environment variable.
 	///
-	/// See the [`env`](index.html) module for more information.
+	/// See the [`env`](mod@env) module for more information.
 	pub fn new(env_mapping: &[(ConfPath, &OsStr)]) -> Box<Self> {
 		Box::new(Self {
 			env_mapping: env_mapping.iter().map(|m| (m.0.clone(), m.1.to_owned())).collect()

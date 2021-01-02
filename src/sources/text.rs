@@ -25,7 +25,7 @@
 //! ## Stacking configuration files
 //! 
 //! To search for configuration information in multiple directories the convenience
-//! function [`stack_config`](fn.stack_config.html) is provided. It
+//! function [`stack_config`] is provided. It
 //! merges all found configuration files allowing parts of a default configuration
 //! file to be overwritten by more specific configuration files in other
 //! directories.
@@ -38,10 +38,10 @@
 //! 
 //! The configuration file format does not make any assumptions about the format of the
 //! value. The usage of quotes or validation can be declared by using
-//! [processors](FIXME) or [validators](FIXME).
+//! [processors](mod@crate::processors) or [validators](mod@crate::validators).
 //! 
 //! Just-Config allows configuration keys to be organized in a hierarchical manner.
-//! This is represented by a [ConfPath](../../struct.ConfPath.html) structure. To represent hierarchical
+//! This is represented by a [ConfPath] structure. To represent hierarchical
 //! configuration values within the key value of the text configuration dot (`.`) is
 //! used as a delimiter.
 //! 
@@ -134,7 +134,7 @@
 //! Sometimes a value should span multiple lines. There are two possible methods to
 //! achieve this:
 //! 
-//! * Using the [`unescape`](FIXME) Processor.
+//! * Using the [`unescape`](crate::processors::Unescape) Processor.
 //! * Using line continuation.
 //! 
 //! The line continuation feature of the text parser allows lines to be continued.
@@ -293,11 +293,11 @@ impl ConfigText {
 	/// with the contained keys. 
 	/// 
 	/// To be able to enumerate the keys of a configuration the
-	/// [`children`](../../struct.ConfPath.html#method.children) method of a
-	/// [`ConfPath`](../../struct.ConfPath.html) instance must be used. This variant of the
-	/// [`new`](#method.new) method allows a `ConfPath` instance to be passed. This 
+	/// [`children`](ConfPath::children) method of a
+	/// [`ConfPath`] instance must be used. This variant of the
+	/// [`new`](Self::new) method allows a [`ConfPath`] instance to be passed. This 
 	/// instance is used to construct all configuration paths while parsing the text
-	/// representation. After this method returns the `ConfPath` instance can be used
+	/// representation. After this method returns the [`ConfPath`] instance can be used
 	/// to explore the contents of the parsed text configuration.
 	pub fn with_path(conf_source: impl Read, source_name: &str, path_root: &ConfPath) -> Result<Box<Self>, Error> {
 		let mut conf = Self {
@@ -410,12 +410,12 @@ impl Source for ConfigText {
 /// This helper function searches the given list of paths in the supplied order
 /// and adds every configuration file as a configuration source. That way the
 /// configuration files are merged by the rules stated in
-/// [`addSource`](../../struct.Config.html#method.add_source).
+/// [`addSource`](crate::Config::add_source).
 ///
 /// The `config_path` parameter allows you to borrow a
-/// [`ConfPath`](../../struct.ConfPath.html) instance to the function. This instnace
+/// [`ConfPath`] instance to the function. This instnace
 /// will be used to store all configuration values for enumeration. See
-/// [Enumerating keys](../../index.html#enumerating-keys) for details.
+/// [Enumerating keys](crate#enumerating-keys) for details.
 ///
 /// ## Example
 ///

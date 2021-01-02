@@ -84,7 +84,7 @@ impl Defaults {
 	///
 	/// The created `Defaults` instance does not contain any values.
 	///
-	/// See the [`defaults`](index.html) module for more information.
+	/// See the [`defaults`](mod@super::defaults) module for more information.
 	pub fn default() -> Box<Self> {
 		Box::new(Self {
 			items: HashMap::default()
@@ -111,7 +111,7 @@ impl Defaults {
 	/// The `source` parameter specifies a string that is used to identify the
 	/// source for this configuration information in error messages.
 	/// 
-	/// See [`put`](#method.put) for an example.
+	/// See [`put`](Self::put) for an example.
 	pub fn set(&mut self, key: ConfPath, value: &str, source: &str) {
 		self.get_item(key).clear().push(Value::new(value.to_owned(), DefaultSourceLocation::new(source)));
 	}
@@ -122,7 +122,7 @@ impl Defaults {
 	/// be used to add multiple values for a configuration item.
 	/// 
 	/// If you want to clear all previously set values instead of adding the
-	/// value to the list of configuration values use [`set`](#method.set).
+	/// value to the list of configuration values use [`set`](Self::set).
 	/// 
 	/// The `source` parameter specifies a string that is used to identify the
 	/// source for this configuration information in error messages.

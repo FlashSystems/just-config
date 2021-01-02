@@ -23,31 +23,31 @@
 //! Configuration information in just-config is represented as a set of nodes.
 //! Each node can have sub nodes forming a configuration tree. To not limit the
 //! developer to a specific choice of separator character the node tree is
-//! represented as an instance of the [ConfPath](struct.ConfPath.html) struct.
+//! represented as an instance of the [ConfPath] struct.
 //!
 //! ## Configuration pipeline
 //!
 //! Configuration information in `just-config` is processed using a
 //! configuration pipeline. You retrieve a configuration value from the
-//! configuration source by calling [`get`](i#tymethod.get). Then the
+//! configuration source by calling [`get`](Config::get). Then the
 //! configuration information is passed though
-//! [processors](processors/index.html) and [validators](validators/index.html).
+//! [processors](processors) and [validators](validators).
 //!
 //! ### Configuration source
 //!
 //! A configuration source is any struct that implements the
-//! [`source`](source/trait.Source.html) trait. This make the configuration
+//! [`Source`] trait. This make the configuration
 //! system very flexible. You can read configuration information from text
 //! files, the network or from environment variables. All these configuration
 //! sources can be mixed and matched.
 //!
-//! There are some [configuration sources already included](sources/index.html)
+//! There are some [configuration sources already included](sources)
 //! in just-config.
 //!
 //! Multiple configuration sources can be registered. They are tried in order of
 //! their registration. The first configuration source that returns a value for
 //! a configuration key is used. That way configuration sources can be layered.
-//! See [`add_source`](struct.Config.html#method.add_source) for more
+//! See [`add_source`](Config::add_source) for more
 //! information and an example.
 //!
 //! ### Processors
@@ -125,9 +125,9 @@
 //! Often you want to supply default values for configuration items. This can be
 //! done in two ways:
 //!
-//! * Use [`try_value()`](item/trait.ValueExtractor.html#tymethod.try_value) and
+//! * Use [`try_value()`](item::ValueExtractor::try_value) and
 //!   supply the default by using `or`.
-//! * Add a [`Defaults`](sources/defaults/struct.Defaults.html) source as the
+//! * Add a [`Defaults`](sources::defaults) source as the
 //!   last configuration source to supply a default value.
 //!
 //! The second option shortens the pipeline length and allows the defaults to be
@@ -159,8 +159,8 @@
 //!
 //! Every `ConfPath` keeps track of all items that where created using it. That
 //! way configuration sources can create a list of configuration items that can
-//! be enumerated. The [`ConfigText` source](sources/text/index.html) offers the
-//! [`with_path`](sources/text/struct.ConfigText.html#method.with_path) method
+//! be enumerated. The [`ConfigText` source](sources::text) offers the
+//! [`with_path`](sources::text::ConfigText) method
 //! that allows you to pass a `ConfPath` into the parser. This `ConfPath` is
 //! used to create the `ConfPath` instances for every configuration node. This
 //! way the configuration can be enumerated using the passed instance.
@@ -222,7 +222,7 @@ impl Default for Config {
 impl Config {
 	/// Add a configuration source to the configuration system.
 	///
-	/// Each configuration source must implement the [`Source`](source/trait.Source.html) trait.
+	/// Each configuration source must implement the [`Source`] trait.
 	/// Multiple configuration sources can be added and are queried from first to last.
 	/// The first configuration source that returns values for a configuration item will be used.
 	/// All following configuration sources will be ignored for this configuration item.
@@ -258,10 +258,10 @@ impl Config {
 
 	/// Convenience method to get a ConfPath instance.
 	///
-	/// Can be used to get a [`ConfPath`](struct.ConfPath.html) instance to
+	/// Can be used to get a [`ConfPath`] instance to
 	/// build configuration paths. If this `ConfPath` instance is used for all
 	/// calls to the configuration library all configuration values can be
-	/// enumerated. For details see [`ConfPath::children()`](struct.ConfPath.html#method.children).
+	/// enumerated. For details see [`ConfPath::children()`].
 	pub fn root(&self) -> ConfPath {
 		self.path_root.clone()
 	}
@@ -269,7 +269,7 @@ impl Config {
 	/// Get the configuration value identified by the passed `ConfPath`.
 	///
 	/// This method is the root of every configuration pipeline. For usage examples
-	/// see the [crates documentation](index.html).
+	/// see the [crates documentation](crate).
 	pub fn get(&self, key: ConfPath) -> Result<StringItem, ConfigError> {
 		self.sources.iter().find_map(|source| source.get(key.clone())).ok_or(ConfigError::ValueNotFound(key))
 	}

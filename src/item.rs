@@ -3,8 +3,8 @@
 //! This basic `Item` structure is used to create the two fundamental types
 //! of just-config:
 //!
-//! - [`StringItem`](struct.StringItem.html)
-//! - [`TypedItem`](struct.TypedItem.html)
+//! - [`StringItem`]
+//! - [`TypedItem`]
 //!
 //! The configuration pipeline uses the two types of configuration items at
 //! different stages. The configuration pipeline looks like the following:
@@ -50,11 +50,11 @@
 //! have to be placed before the validators within the pipeline.
 //!
 //! The last call `value()` is implemented via the
-//! [`ValueExtractor`](trait.ValueExtractor.html) trait.
-//! The `ValueExtractor` can (like validators) be called on
-//! `Result<StringItem, ConfigError>` or `Result<TypedItem<T>, ConfigError>`. It
+//! [`ValueExtractor`] trait.
+//! The `ValueExtractor` can (like [`validators`](crate::validators)) be called on
+//! `Result<`[`StringItem`]`, `[`ConfigError`]`>` or `Result<`[`TypedItem<T>`]`, `[`ConfigError`]`>`. It
 //! extracts the value from the pipeline and returns it to the caller. There are
-//! multiple methods implemented for the `ValueExtractor` trait to be able to
+//! multiple methods implemented for the [`ValueExtractor`] trait to be able to
 //! return different kinds of values:
 //!
 //! * Optional values
@@ -83,7 +83,7 @@ pub trait SourceLocation : std::fmt::Display + std::fmt::Debug {}
 /// location is used to supply information to the user where the configuration
 /// value is coming from.
 ///
-/// See [`Item`](../item/index.html) for more Information.
+/// See [`Item`](crate::item) for more Information.
 pub struct Value<T> {
 	value: T,
 	source: Rc<dyn SourceLocation>
@@ -93,7 +93,7 @@ impl <T> Value<T> {
 	/// Create a new configuration value.
 	///
 	/// Configuration values are normally created to be included into configuration
-	/// [`Item`](../item/index.html)s.
+	/// [`Item`](crate::item)s.
 	pub fn new(value: T, source: Rc<dyn SourceLocation>) -> Rc<Self> {
 		Rc::new(Self {
 			value,
@@ -118,10 +118,10 @@ struct Item<T> {
 ///
 /// `StringItem` implements some additional methods that are useful while a new
 /// `Item` is created within a config source.
-/// See [`Source`](FIXME) for more information.
+/// See [`Source`](crate::Source) for more information.
 ///
 /// For more information about processors and validators see
-/// [`Item`](../item/index.html).
+/// [`Item`](crate::item).
 #[derive(Clone)]
 pub struct StringItem(Item<String>);
 
@@ -155,9 +155,9 @@ impl StringItem {
 }
 
 /// Newtype for Items while they are passed though the validators of the config
-/// pipeline and to the [`ValueExtractor`](trait.ValueExtractor.html).
+/// pipeline and to the [`ValueExtractor`].
 ///
-/// See [`Item`](index.html) for more Information.
+/// See [`Item`](crate::item) for more Information.
 #[derive(Clone)]
 pub struct TypedItem<T: FromStr>(Item<T>);
 
@@ -234,7 +234,7 @@ impl <T: FromStr> TryInto<TypedItem<T>> for Result<StringItem, ConfigError> wher
 /// This Trait is implemented for `Result<TypedItem<T>, ConfigError>` and
 /// `Result<StringItem, ConfigError>`. This makes sure that the methods can be
 /// called on the raw `StringItems` and on the `TypedItems` returned by
-/// [validators](asdf).
+/// [validators](crate::validators).
 ///
 /// The Implementation for `StringItem` will do the same conversion that is
 /// normally done when calling a validator.
@@ -269,7 +269,7 @@ pub trait ValueExtractor<T: FromStr> {
 
 	/// Returns a configuration value or raises an error if it does not exists.
 	///
-	/// This method works like [`try_value()`](#tymethod.try_value) but returns an error if the
+	/// This method works like [`try_value()`](Self::try_value) but returns an error if the
 	/// configuration item does not exist.
 	///
 	/// This method should be used to return mandatory configuration values that

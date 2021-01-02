@@ -2,7 +2,7 @@
 //! before they get parsed into typed values.
 //!
 //! Processors are used to modify configuration items. For an introduction to
-//! configuration items see the documentation for the [`item`](../item/index.html)
+//! configuration items see the documentation for the [`item`](crate::item)
 //! module.
 //!
 //! Processors are implemented as the combination of a trait and an implementation.
@@ -11,8 +11,8 @@
 //! an owned `self` and returns `Result<StringItem, ConfigError>`. That way
 //! processors can be easily chained.
 //!
-//! To use a processor just put it after the [`get`](../struct.Config.html#method.get)
-//! method of the [`Config`](../struct.Config.html) struct.
+//! To use a processor just put it after the [`get`](crate::Config::get)
+//! method of the [`Config`](crate::Config) struct.
 //!
 //! ```rust
 //! # use justconfig::Config;
@@ -30,12 +30,12 @@
 //!
 //! ## Implementing a processor
 //!
-//! To implement a new processor first have a look at the [source](../../src/justconfig/processors.rs.html)
+//! To implement a new processor first have a look at the [source](crate::processors)
 //! of the existing processors.
 //!
 //! For processors there is a helper method within the
-//! [`Item`](../item/struct.StringItem.html) struct. This method is called
-//! [`map`](../item/struct.StringItem.html#method.map).
+//! [`Item`](crate::item::StringItem) struct. This method is called
+//! [`map`](crate::item::StringItem#map).
 //!
 //! The processor first checks, if there is an error value within the `Result`.
 //! If there is one, the error is returned without further processing.
@@ -536,7 +536,7 @@ impl Subst for Result<StringItem, ConfigError> {
 	/// Call this method to substitute placeholders with an application defined
 	/// value.
 	///
-	/// For a general description see the [`env`](#method.env) method. This
+	/// For a general description see the [`env`](crate::processors::Subst::env) method. This
 	/// method is more general than `env` as it allows the characters enclosing
 	/// the variable to be set and uses a callback to supply the value that
 	/// should be substituted.
@@ -551,7 +551,7 @@ impl Subst for Result<StringItem, ConfigError> {
 	///
 	/// ## Example
 	///
-	/// This example emulates the [`env`](#method.env) method but returns an
+	/// This example emulates the [`env`](crate::processors::Subst::env) method but returns an
 	/// error if the environment variable is not found. In addition it replaces
 	/// the curly brackets used by the `env` method with round ones.
 	///

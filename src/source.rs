@@ -24,6 +24,6 @@ pub trait Source {
 	/// Eventually returning `None` and `Some(StringItem)` with an empty values
 	/// vector yields the same results.
 	///
-	/// See [`Item`](../item/index.html) for more Information.
+	/// See [`item`](crate::item) for more Information.
 	fn get(&self, key: ConfPath) -> Option<StringItem>;
 }

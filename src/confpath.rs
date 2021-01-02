@@ -20,7 +20,7 @@ struct ConfPathData {
 /// only a refrence counted reference to the data of the path node.
 /// Therefore it can be cloned without much overhead.
 ///
-/// An `iter()` method is provided for easy enummeration of the config paths
+/// An [`iter()`](ConfPath::iter) method is provided for easy enumeration of the config paths
 /// components.
 ///
 /// # Examples
@@ -52,7 +52,7 @@ struct ConfPathData {
 /// tree gets torn down.
 ///
 /// If you only want a temporary value, create a new configuration tree by
-/// using the `from` or `from_iter` methods.
+/// using the [`from`](ConfPath::from) method.
 ///
 /// The comparison method `eq` makes sure, that the same paths from different
 /// configuration trees compare equal. It uses a shortcut if the compared values

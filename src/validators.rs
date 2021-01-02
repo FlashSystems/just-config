@@ -1,4 +1,4 @@
-//! Validators, in contrast to [processors](../processors/index.html) do not
+//! Validators, in contrast to [processors](crate::processors) do not
 //! modify the value on any way.
 //!
 //! They are called after processors and operate on
@@ -8,7 +8,7 @@
 //!
 //! Validators are used to validate the contents of the values of a configuration
 //! item. For an introduction to configuration items see the documentation for
-//! the [`item`](../item/index.html) module.
+//! the [`item`](crate::item) module.
 //!
 //! Validators are implemented as the combination of a trait and an implementation.
 //! The trait defines the methods that the processor provides and is always
@@ -23,8 +23,8 @@
 //! value.
 //!
 //! To use a validator just put directly after the
-//! [`get`](../struct.Config.html#method.get) method of the
-//! [`Config`](../struct.Config.html) struct or after the last processor.
+//! [`get`](crate::Config::get) method of the
+//! [`Config`](crate::Config) struct or after the last processor.
 //!
 //! ```rust
 //! # use justconfig::Config;
@@ -47,12 +47,12 @@
 //!
 //! ## Implementing a validator
 //!
-//! To implement a new validator first have a look at the [source](../../src/justconfig/validators.rs.html)
+//! To implement a new validator first have a look at the [source](crate::validators)
 //! of the existing validators.
 //!
 //! For validators there is a helper method within the
-//! [`Item`](../item/struct.StringItem.html) struct. This method is called
-//! [`filter`](../item/struct.StringItem.html#method.filter).
+//! [`TypedItem`](crate::item::TypedItem) struct. This method is called
+//! [`filter`](crate::item::TypedItem::filter).
 //!
 //! The validator first checks, if there is an error value within the `Result`.
 //! If there is one, the error is returned without any further validation.
