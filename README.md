@@ -76,6 +76,9 @@ let search_paths: Vec<String> = conf.get(conf.root().push("searchPath")).explode
   Added the `stack_config` function to the `text` source module. This function makes merging
   configuration files from multiple source paths easier.
 
+* Version 0.9.2\
+  Updated documentation to use intra-doc-links.
+
 ## Design rational
 
 If you are interested about the rationale behind the design of this library (and can stand some highly opinionated reasoning) you can read on.
