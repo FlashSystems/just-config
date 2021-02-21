@@ -97,6 +97,7 @@
 //! let config_env = Env::new(&[
 //!   (ConfPath::from(&["searchPath"]), OsStr::new("SEARCH_PATH")),
 //! ]);
+//! conf.add_source(config_env);
 //!
 //! // Open the configuration file
 //! let config_file = File::open("myconfig.conf").expect("Could not open config file.");
