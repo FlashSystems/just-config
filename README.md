@@ -20,7 +20,7 @@ Writing your own configuration sources (for example for etcd) is really easy. Yo
 If you just want to use this library, open the documentation, look at the examples and descriptions and start using it by adding the following to the `[dependencies]` section of your `Cargo.toml`:
 
 ```toml
-justconfig = "0.9"
+justconfig = "1.0"
 ```
 
 ## Basic example
@@ -70,7 +70,7 @@ let search_paths: Vec<String> = conf.get(conf.root().push("searchPath")).explode
   Add some more examples
 
 * Version 0.9.0\
-  **Breaking change**: Added range syntax for configuration values and range validation. All occurences of `values()` and `between()` must be updated. The error handling for validation errors of the `between`-validator has changes as well.
+  **Breaking change**: Added range syntax for configuration values and range validation. All occurrences of `values()` and `between()` must be updated. The error handling for validation errors of the `between`-validator has changes as well.
 
 * Version 0.9.1\
   Added the `stack_config` function to the `text` source module. This function makes merging
@@ -78,6 +78,10 @@ let search_paths: Vec<String> = conf.get(conf.root().push("searchPath")).explode
 
 * Version 0.9.2\
   Updated documentation to use intra-doc-links.
+
+* Version 1.0.0\
+  Fixed that non existent configuration keys satisfied a `1..` range limit. Now this is correctly detected as an error.\
+  Updates to documentation to mention `stack_config` on the library page.
 
 ## Design rational
 
