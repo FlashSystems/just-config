@@ -369,8 +369,8 @@ fn values_out_of_range<T: FromStr, R: RangeBounds<usize>>(mut item: TypedItem<T>
 			// Lower bound violated
 			Err(ConfigError::NotEnoughValues(lower_limit_inc.unwrap(), item.0.key))
 		} else if upper_limit_excl.is_some() && (num_items >= upper_limit_excl.unwrap()) {
-			let first_surplus_index = upper_limit_excl.unwrap().saturating_sub(1);
 			// Upper bound violated
+			let first_surplus_index = upper_limit_excl.unwrap().saturating_sub(1);
 			let surplus_sources = item.0.values.drain(first_surplus_index..).map(|r| Rc::try_unwrap(r).map(|v| v.source).map_err(|_| ConfigError::MultipleReferences)).collect::<Result<Vec<Rc<dyn SourceLocation>>, ConfigError>>()?;
 
 			Err(ConfigError::TooManyValues(first_surplus_index, item.0.key, surplus_sources))
