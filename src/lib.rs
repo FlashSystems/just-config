@@ -184,6 +184,16 @@
 //!     print!("{}", config_node.tail_component_name().unwrap())
 //! }
 //! ```
+//!
+//! ## Multiple configuration files
+//!
+//! This crate contains a convenience function for configuration file stacking.
+//! Often a default configuration is supplied by the distribution within
+//! `/usr/share/mypackage` and the administrator can override some settings by
+//! supplying a configuration file in `/etc`. The
+//! [`stack_config`](sources::text::stack_config) function makes
+//! this kind of configuration easy to implement by containing all the necessary
+//! boilerplate code.
 
 use std::default::Default;
 
