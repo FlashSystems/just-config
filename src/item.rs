@@ -404,7 +404,7 @@ impl <T: FromStr> ValueExtractor<T> for Result<TypedItem<T>, ConfigError> {
 		// This makes sure that an empty value-vectors is equvalent with an ValueNotFound error for all purposes.
 		match self {
 			Ok(item) => values_out_of_range(item, range),
-			Err(ConfigError::ValueNotFound(_)) => Ok(Vec::default()),
+			Err(ConfigError::ValueNotFound(key)) => values_out_of_range(TypedItem::<T>::new(key, Vec::default()), range), // Create an empty TypedItem to allow handling the config range correctly
 			Err(error) => Err(error)
 		}
 	}
@@ -519,6 +519,8 @@ mod tests {
 
 		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(3..) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'two_values\' must have at least 3 values.");
 		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(4..5) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'two_values\' must have at least 4 values.");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(&["no_value"])).values(1..) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'no_value\' must have at least 1 values.");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(&["unkown_key"])).values(1..) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'unkown_key\' must have at least 1 values.");
 	}
 
 	#[test]
@@ -555,5 +557,17 @@ mod tests {
 		let mut values: Vec<String> = c.get(c.root().push_all(&["one_value"])).values(1..).unwrap();
 		assert_eq!(values.len(), 1);
 		assert_eq!(values.pop().unwrap(), "one_value");
+
+		let values: Vec<String> = c.get(c.root().push_all(&["unkown_key"])).values(..).unwrap();
+		assert_eq!(values.len(), 0);
+
+		let values: Vec<String> = c.get(c.root().push_all(&["unkown_key"])).values(..1).unwrap();
+		assert_eq!(values.len(), 0);
+
+		let values: Vec<String> = c.get(c.root().push_all(&["unkown_key"])).values(..=1).unwrap();
+		assert_eq!(values.len(), 0);
+
+		let values: Vec<String> = c.get(c.root().push_all(&["unkown_key"])).values(..=0).unwrap();
+		assert_eq!(values.len(), 0);
 	}
 }
