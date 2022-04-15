@@ -395,7 +395,7 @@ impl Unquote for Result<StringItem, ConfigError> {
 /// If `enabler` is `$` and `start` is `{` the sequence `$${` will output `${`.
 /// The sequence `$$a` will output `$$a`.
 fn expand(input: &str, enabler: char, start: char, end: char, resolver: &dyn Fn(&str) -> Result<String, Box<dyn Error>>) -> Result<String, Box<dyn Error>> {
-	enum EnvState { Text, ProtoPlaceholder((usize, usize)), InPlaceholder((usize, usize)), Escaped };
+	enum EnvState { Text, ProtoPlaceholder((usize, usize)), InPlaceholder((usize, usize)), Escaped }
 
 	let mut result = String::with_capacity(input.len());
 
