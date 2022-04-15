@@ -127,21 +127,17 @@ pub struct StringItem(Item<String>);
 
 impl StringItem {
 	pub(crate) fn new(key: ConfPath) -> Self {
-		Self {
-			0: Item {
-				key,
-				values: Vec::with_capacity(1)
-			}
-		}
+		Self (Item {
+			key,
+			values: Vec::with_capacity(1)
+		})
 	}
 
 	pub(crate) fn from(key: ConfPath, values: &[Rc<Value<String>>]) -> Self {
-		Self {
-			0: Item {
-				key,
-				values: Vec::from(values)
-			}
-		}
+		Self (Item {
+			key,
+			values: Vec::from(values)
+		})
 	}
 
 	pub(crate) fn push(&mut self, new_value: Rc<Value<String>>) {
@@ -163,12 +159,10 @@ pub struct TypedItem<T: FromStr>(Item<T>);
 
 impl <T: FromStr> TypedItem<T> {
 	pub(crate) fn new(key: ConfPath, values: Vec<Rc<Value<T>>>) -> Self {
-		Self {
-			0: Item {
-				key,
-				values
-			}
-		}
+		Self(Item {
+			key,
+			values
+		})
 	}
 }
 
