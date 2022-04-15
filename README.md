@@ -83,6 +83,9 @@ let search_paths: Vec<String> = conf.get(conf.root().push("searchPath")).explode
   Fixed that non existent configuration keys satisfied a `1..` range limit. Now this is correctly detected as an error.\
   Updates to documentation to mention `stack_config` on the library page.
 
+* Version 1.0.1\
+  Cosmetic Code changes to fix some clippy warnings.
+
 ## Design rational
 
 If you are interested about the rationale behind the design of this library (and can stand some highly opinionated reasoning) you can read on.
