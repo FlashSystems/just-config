@@ -17,7 +17,7 @@ struct ConfPathData {
 ///
 /// This type provides methods like push and pop. None of these methods visibly
 /// modifies `self`. All return a new `ConfPath` structure. This structure is
-/// only a refrence counted reference to the data of the path node.
+/// only a reference counted reference to the data of the path node.
 /// Therefore it can be cloned without much overhead.
 ///
 /// An [`iter()`](ConfPath::iter) method is provided for easy enumeration of the config paths
@@ -92,14 +92,14 @@ impl Hash for ConfPath {
 impl PartialEq for ConfPath {
 	fn eq(&self, other: &Self) -> bool {
 		// If the two elements point to the same data
-		// they share the same config root and will definitily be equal.
+		// they share the same config root and will definitely be equal.
 		// This is ensured by the way `push` is implemented.
 		if Rc::ptr_eq(&self.data, &other.data) {
 			true
 		} else {
 			// If the root of the two ConfPath instances is the same
 			// and the data pointers differ they are different. We do not
-			// need to do more comparion.
+			// need to do more comparison.
 			if Rc::ptr_eq(&self.root, &other.root) {
 				false
 			} else {
@@ -384,7 +384,7 @@ mod tests {
 		assert!(cp_iter.next().is_none());
 		assert!(cp_iter.next().is_none());
 	}
-
+	
 	#[test]
 	fn is_root() {
 		let cp_root = ConfPath::default();
@@ -454,7 +454,7 @@ mod tests {
 	#[test]
 	fn free() {
 		// This weak reference is used to test if the tree is freed correctly after
-		// the last ConfPath was droped.
+		// the last ConfPath was dropped.
 		let wr_root;
 		let wr_inode;
 
@@ -462,7 +462,7 @@ mod tests {
 			let lnode;
 
 			{
-				// Create the follwoing tree:
+				// Create the following tree:
 				// root -> internal -> leaf
 				// The ConfPaths referencing to `root` and `internal` will be
 				// dropped after this inner scope.
@@ -477,7 +477,7 @@ mod tests {
 				assert!(wr_inode.upgrade().is_some());
 			}
 
-			// Now `root` and `internal` are droped. The reference to the
+			// Now `root` and `internal` are dropped. The reference to the
 			// path component `leaf` must keep the whole tree and all of its
 			// children alive.
 			lnode.push("test");
@@ -486,7 +486,7 @@ mod tests {
 			assert!(wr_inode.upgrade().is_some());
 	}
 
-		// Now even `leave` was droped. The root node and all it's children
+		// Now even `leave` was dropped. The root node and all it's children
 		// must be gone now!
 		assert!(wr_root.upgrade().is_none());
 		assert!(wr_inode.upgrade().is_none());
@@ -503,12 +503,12 @@ mod tests {
 		// to remove the returned elements form the reference_set and later
 		// check if the set is empty.
 		let mut reference_set: HashSet<ConfPath> = HashSet::from_iter([ConfPath::from(&["a"]), ConfPath::from(&["b"])].iter().cloned());
-		cp.children().for_each(|c| assert!(reference_set.remove(&c), "Iterator returned to many elements."));
+		cp.children().for_each(|c| assert!(reference_set.remove(&c), "Iterator returned too many elements."));
 		assert_eq!(reference_set.len(), 0, "Iterator returned not enough elements.");
 
 		// Verify again with an intermediate node
 		let mut reference_set: HashSet<ConfPath> = HashSet::from_iter([ConfPath::from(&["a", "a1"])].iter().cloned());
-		cp.push("a").children().for_each(|c| assert!(reference_set.remove(&c), "Iterator returned to many elements."));
+		cp.push("a").children().for_each(|c| assert!(reference_set.remove(&c), "Iterator returned too many elements."));
 		assert_eq!(reference_set.len(), 0, "Iterator returned not enough elements.");
 	}
 
