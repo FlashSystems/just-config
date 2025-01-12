@@ -141,7 +141,7 @@ impl IntoIterator for ConfPath {
 
 		while !pos.is_root() {
 			path.push(pos.clone());
-			pos = pos.pop().unwrap().1;	// We already checked that this is not the root node. So unwraping pop() is ok here.
+			pos = pos.pop().unwrap().1;	// We already checked that this is not the root node. So unwrapping pop() is ok here.
 		}
 
 		path.into_iter().rev()
@@ -159,7 +159,7 @@ impl Display for ConfPath {
 				write!(f, ".")?;
 			}
 
-			// We already checked that this is not the root node. So unwraping pop() and tail_component_name() is ok here.
+			// We already checked that this is not the root node. So unwrapping pop() and tail_component_name() is ok here.
 			write!(f, "{}", pos.tail_component_name().unwrap())?;
 			pos = pos.pop().unwrap().1;
 
@@ -415,7 +415,7 @@ mod tests {
 		assert_eq!(root1.push("a"), root1.push("a"));
 		assert_eq!(root1.push_all(["a", "b"]), root1.clone() + "a" + "b");
 
-		// Make sure different paths do not compare qeual
+		// Make sure different paths do not compare equal
 		assert_ne!(root1.push_all(["a", "b"]), root1.push("a"));
 		assert_ne!(root1.push_all(["a", "b"]), root1.push("b"));
 
@@ -502,13 +502,13 @@ mod tests {
 		// The order of the returned elements is not guaranteed. Therefore we've
 		// to remove the returned elements form the reference_set and later
 		// check if the set is empty.
-		#[allow(clippy::mutable_key_type)] // This is one of the false positives mentioned in the docoumentation.
+		#[allow(clippy::mutable_key_type)] // This is one of the false positives mentioned in the documentation.
 		let mut reference_set: HashSet<ConfPath> = HashSet::from_iter([ConfPath::from(&["a"]), ConfPath::from(&["b"])].iter().cloned());
 		cp.children().for_each(|c| assert!(reference_set.remove(&c), "Iterator returned too many elements."));
 		assert_eq!(reference_set.len(), 0, "Iterator returned not enough elements.");
 
 		// Verify again with an intermediate node
-		#[allow(clippy::mutable_key_type)] // This is one of the false positives mentioned in the docoumentation.
+		#[allow(clippy::mutable_key_type)] // This is one of the false positives mentioned in the documentation.
 		let mut reference_set: HashSet<ConfPath> = HashSet::from_iter([ConfPath::from(&["a", "a1"])].iter().cloned());
 		cp.push("a").children().for_each(|c| assert!(reference_set.remove(&c), "Iterator returned too many elements."));
 		assert_eq!(reference_set.len(), 0, "Iterator returned not enough elements.");
@@ -528,7 +528,7 @@ mod tests {
 		// The order of the returned elements is not guaranteed. Therefore we've
 		// to remove the returned elements form the reference_set and later
 		// check if the set is empty.
-		#[allow(clippy::mutable_key_type)] // This is one of the false positives mentioned in the docoumentation.
+		#[allow(clippy::mutable_key_type)] // This is one of the false positives mentioned in the documentation.
 		let mut reference_set: HashSet<ConfPath> = HashSet::from_iter([ConfPath::from(&["a"]), ConfPath::from(&["b"])].iter().cloned());
 		root_child_iter.for_each(|c| assert!(reference_set.remove(&c), "Iterator returned to many elements."));
 		assert_eq!(reference_set.len(), 0, "Iterator returned not enough elements.");
