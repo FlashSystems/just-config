@@ -373,6 +373,9 @@ impl Unquote for Result<StringItem, ConfigError> {
 	}
 }
 
+/// Type definition of a resolver function used by processors.
+type Resolver<'f> = &'f dyn Fn(&str) -> Result<String, Box<dyn Error>>;
+
 /// Expands an input string by calling a resolver function for each placeholder.
 ///
 /// The `enabler` character starts the placeholder. The next character must be
@@ -394,7 +397,7 @@ impl Unquote for Result<StringItem, ConfigError> {
 /// ## Example
 /// If `enabler` is `$` and `start` is `{` the sequence `$${` will output `${`.
 /// The sequence `$$a` will output `$$a`.
-fn expand(input: &str, enabler: char, start: char, end: char, resolver: &dyn Fn(&str) -> Result<String, Box<dyn Error>>) -> Result<String, Box<dyn Error>> {
+fn expand(input: &str, enabler: char, start: char, end: char, resolver: Resolver) -> Result<String, Box<dyn Error>> {
 	enum EnvState { Text, ProtoPlaceholder((usize, usize)), InPlaceholder((usize, usize)), Escaped }
 
 	let mut result = String::with_capacity(input.len());
@@ -489,7 +492,7 @@ fn expand(input: &str, enabler: char, start: char, end: char, resolver: &dyn Fn(
 /// environment variables).
 pub trait Subst where Self: Sized {
 	fn env(self) -> Result<StringItem, ConfigError>;
-	fn expand(self, start: char, end: char, resolver: &dyn Fn(&str) -> Result<String, Box<dyn Error>>) -> Result<StringItem, ConfigError>;
+	fn expand(self, start: char, end: char, resolver: Resolver) -> Result<StringItem, ConfigError>;
 }
 
 impl Subst for Result<StringItem, ConfigError> {
@@ -602,11 +605,11 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["empty"]), "", "empty_test");
-		d.set(c.root().push_all(&["ten"]), "10", "10");
-		d.set(c.root().push_all(&["splitme"]), "1,2,3", "splitme");
-		d.set(c.root().push_all(&["multisplit"]), "1:2", "multisplit.1");
-		d.put(c.root().push_all(&["multisplit"]), "3:4:5", "multisplit.2");
+		d.set(c.root().push_all(["empty"]), "", "empty_test");
+		d.set(c.root().push_all(["ten"]), "10", "10");
+		d.set(c.root().push_all(["splitme"]), "1,2,3", "splitme");
+		d.set(c.root().push_all(["multisplit"]), "1:2", "multisplit.1");
+		d.put(c.root().push_all(["multisplit"]), "3:4:5", "multisplit.2");
 		c.add_source(d);
 
 		let values: Vec<u32> = c.get(ConfPath::from(&["splitme"])).explode(',').values(..).unwrap();
@@ -641,8 +644,8 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["trim"]), "  text  ", "splitme");
-		d.set(c.root().push_all(&["trim_mixed"]), "\ttext  ", "splitme");
+		d.set(c.root().push_all(["trim"]), "  text  ", "splitme");
+		d.set(c.root().push_all(["trim_mixed"]), "\ttext  ", "splitme");
 		c.add_source(d);
 
 		let value: String = c.get(ConfPath::from(&["trim"])).trim().value().unwrap();
@@ -663,10 +666,10 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["standard"]), "\\r\\n\\t", "standard");
-		d.set(c.root().push_all(&["with_text"]), "rrr\\rnnn\\nttt\\t", "standard");
-		d.set(c.root().push_all(&["unknown"]), "\\x\\y\\z", "unknown");
-		d.set(c.root().push_all(&["at_end"]), "Text\\", "at_end");
+		d.set(c.root().push_all(["standard"]), "\\r\\n\\t", "standard");
+		d.set(c.root().push_all(["with_text"]), "rrr\\rnnn\\nttt\\t", "standard");
+		d.set(c.root().push_all(["unknown"]), "\\x\\y\\z", "unknown");
+		d.set(c.root().push_all(["at_end"]), "Text\\", "at_end");
 		c.add_source(d);
 
 		let value: String = c.get(ConfPath::from(&["standard"])).unescape().value().unwrap();
@@ -687,12 +690,12 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["some_empty"]), "some_empty", "some_empty1");
-		d.put(c.root().push_all(&["some_empty"]), "", "some_empty2");
-		d.put(c.root().push_all(&["some_empty"]), " ", "some_empty3");
-		d.put(c.root().push_all(&["some_empty"]), "not_empty", "some_empty4");
-		d.set(c.root().push_all(&["all_empty"]), "", "all_empty1");
-		d.put(c.root().push_all(&["all_empty"]), "", "all_empty2");
+		d.set(c.root().push_all(["some_empty"]), "some_empty", "some_empty1");
+		d.put(c.root().push_all(["some_empty"]), "", "some_empty2");
+		d.put(c.root().push_all(["some_empty"]), " ", "some_empty3");
+		d.put(c.root().push_all(["some_empty"]), "not_empty", "some_empty4");
+		d.set(c.root().push_all(["all_empty"]), "", "all_empty1");
+		d.put(c.root().push_all(["all_empty"]), "", "all_empty2");
 		c.add_source(d);
 
 		let mut values: Vec<String> = c.get(ConfPath::from(&["some_empty"])).not_empty().values(..).unwrap();
@@ -710,10 +713,10 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["quote"]), "\"test\"", "quote");
-		d.set(c.root().push_all(&["no_quote"]), "test", "no_quote");
-		d.set(c.root().push_all(&["start_quote"]), "\"test", "start_quote");
-		d.set(c.root().push_all(&["end_quote"]), "test\"", "end_quote");
+		d.set(c.root().push_all(["quote"]), "\"test\"", "quote");
+		d.set(c.root().push_all(["no_quote"]), "test", "no_quote");
+		d.set(c.root().push_all(["start_quote"]), "\"test", "start_quote");
+		d.set(c.root().push_all(["end_quote"]), "test\"", "end_quote");
 		c.add_source(d);
 
 		let value: String = c.get(ConfPath::from(&["quote"])).unquote().value().unwrap();
@@ -730,7 +733,7 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["missing_end_quote"]), "\"test", "start_quote");
+		d.set(c.root().push_all(["missing_end_quote"]), "\"test", "start_quote");
 		c.add_source(d);
 
 		let _: String = c.get(ConfPath::from(&["missing_end_quote"])).unquote().value().unwrap();
@@ -741,14 +744,14 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["env"]), "env=${TEST_ENV}", "env");
-		d.set(c.root().push_all(&["env_multiple"]), "a_first=${TEST_ENV} b_second=${TEST_ENV_SECOND} c_missing=${MISSING_ENV}", "env_multiple");
-		d.set(c.root().push_all(&["env_missing"]), "env=${MISSING_ENV}", "missing_env");
-		d.set(c.root().push_all(&["env_empty"]), "env=${}", "env_test");
-		d.set(c.root().push_all(&["env_escape"]), "env=$${NO_REPLACE}", "env_escape");
-		d.set(c.root().push_all(&["env_fake_escape"]), "cash=20$$$", "env_fake_escape");
-		d.set(c.root().push_all(&["env_unclosed"]), "env=${UNCLOSED", "env_unclosed");
-		d.set(c.root().push_all(&["env_special"]), "env=${${ENV}}", "env_special");
+		d.set(c.root().push_all(["env"]), "env=${TEST_ENV}", "env");
+		d.set(c.root().push_all(["env_multiple"]), "a_first=${TEST_ENV} b_second=${TEST_ENV_SECOND} c_missing=${MISSING_ENV}", "env_multiple");
+		d.set(c.root().push_all(["env_missing"]), "env=${MISSING_ENV}", "missing_env");
+		d.set(c.root().push_all(["env_empty"]), "env=${}", "env_test");
+		d.set(c.root().push_all(["env_escape"]), "env=$${NO_REPLACE}", "env_escape");
+		d.set(c.root().push_all(["env_fake_escape"]), "cash=20$$$", "env_fake_escape");
+		d.set(c.root().push_all(["env_unclosed"]), "env=${UNCLOSED", "env_unclosed");
+		d.set(c.root().push_all(["env_special"]), "env=${${ENV}}", "env_special");
 		c.add_source(d);
 
 		env::set_var("TEST_ENV", "asdf");
@@ -779,14 +782,14 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["round_br"]), "env=$(TEST)", "round_br");
-		d.set(c.root().push_all(&["square_br"]), "env=$[TEST]", "square_br");
-		d.set(c.root().push_all(&["same_start_end"]), "env=$|TEST|", "same_start_end");
+		d.set(c.root().push_all(["round_br"]), "env=$(TEST)", "round_br");
+		d.set(c.root().push_all(["square_br"]), "env=$[TEST]", "square_br");
+		d.set(c.root().push_all(["same_start_end"]), "env=$|TEST|", "same_start_end");
 		c.add_source(d);
 
 		// This resolver checks if the passed key is "TEST". All tests use this key.
 		let resolver_ok = |key: &str| { assert_eq!(key, "TEST"); Ok(String::from("asdf")) };
-		let resolver_err: &dyn Fn(&str) -> Result<String, Box<dyn Error>> = &|_: &str| { Err(Box::new(std::env::VarError::NotPresent)) };
+		let resolver_err: Resolver = &|_: &str| { Err(Box::new(std::env::VarError::NotPresent)) };
 
 		let value: String = c.get(ConfPath::from(&["round_br"])).expand('(', ')', &resolver_ok).value().unwrap();
 		assert_eq!(value, "env=asdf");
@@ -803,8 +806,8 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["expand_me"]), "env=${test}", "round_br");
-		d.set(c.root().push_all(&["test"]), "asdf", "square_br");
+		d.set(c.root().push_all(["expand_me"]), "env=${test}", "round_br");
+		d.set(c.root().push_all(["test"]), "asdf", "square_br");
 		c.add_source(d);
 
 		// This resolver uses the config tree to resolve the passed key. That way the config system can refer to itself

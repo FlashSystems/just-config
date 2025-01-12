@@ -217,7 +217,7 @@ impl ConfPath {
 	/// use justconfig::ConfPath;
 	///
 	/// let cp_a = ConfPath::default().push("a");
-	/// let cp_abc = cp_a.push_all(&["b", "c"]);
+	/// let cp_abc = cp_a.push_all(["b", "c"]);
 	///
 	/// assert_eq!(cp_abc, ConfPath::from(&["a", "b", "c"]));
 	/// ```
@@ -235,7 +235,7 @@ impl ConfPath {
 	/// ```
 	/// use justconfig::ConfPath;
 	///
-	/// let cp = ConfPath::default().push_all(&["a", "b"]);
+	/// let cp = ConfPath::default().push_all(["a", "b"]);
 	///
 	/// let (component, cp) = cp.pop().unwrap();
 	/// assert_eq!(component, "b");
@@ -285,7 +285,7 @@ impl ConfPath {
 	/// ```
 	/// use justconfig::ConfPath;
 	///
-	/// let cp = ConfPath::default().push_all(&["first", "second", "last"]);
+	/// let cp = ConfPath::default().push_all(["first", "second", "last"]);
 	///
 	/// assert_eq!(cp.tail_component_name().unwrap(), "last");
 	/// ```
@@ -312,7 +312,7 @@ impl ConfPath {
 	/// ```
 	/// use justconfig::ConfPath;
 	///
-	/// let cp = ConfPath::default().push_all(&["first", "second", "last"]);
+	/// let cp = ConfPath::default().push_all(["first", "second", "last"]);
 	///
 	/// for child in cp.children() {
 	///   println!("{}", child.tail_component_name().unwrap());
@@ -344,14 +344,14 @@ mod tests {
 
 	#[test]
 	fn creation() {
-		let cp = ConfPath::default().push_all(&["a", "b", "c"]);
+		let cp = ConfPath::default().push_all(["a", "b", "c"]);
 
 		check_path(&cp, &["a", "b", "c"]);
 	}
 
 	#[test]
 	fn pop() {
-		let cp = ConfPath::default().push_all(&["a", "b"]);
+		let cp = ConfPath::default().push_all(["a", "b"]);
 
 		// We do this manually to check that pop works correctly.
 		let (part, cp) = cp.pop().unwrap();
@@ -364,18 +364,18 @@ mod tests {
 
 	#[test]
 	fn push() {
-		let cp = ConfPath::default().push_all(&["a", "b"]);
+		let cp = ConfPath::default().push_all(["a", "b"]);
 
 		let cp = cp.push("c");
 		check_path(&cp, &["a", "b", "c"]);
 
-		let cp = cp.push_all(&["d", "e"]);
+		let cp = cp.push_all(["d", "e"]);
 		check_path(&cp, &["a", "b", "c", "d", "e"]);
 	}
 
 	#[test]
 	fn iterator() {
-		let cp = ConfPath::default().push_all(&["a", "b"]);
+		let cp = ConfPath::default().push_all(["a", "b"]);
 
 		let mut cp_iter = cp.into_iter();
 
@@ -413,19 +413,19 @@ mod tests {
 
 		// Make sure the same strings compare equal
 		assert_eq!(root1.push("a"), root1.push("a"));
-		assert_eq!(root1.push_all(&["a", "b"]), root1.clone() + "a" + "b");
+		assert_eq!(root1.push_all(["a", "b"]), root1.clone() + "a" + "b");
 
 		// Make sure different paths do not compare qeual
-		assert_ne!(root1.push_all(&["a", "b"]), root1.push("a"));
-		assert_ne!(root1.push_all(&["a", "b"]), root1.push("b"));
+		assert_ne!(root1.push_all(["a", "b"]), root1.push("a"));
+		assert_ne!(root1.push_all(["a", "b"]), root1.push("b"));
 
 		// Make sure the same path in different roots compares equal
 		assert_eq!(root1.push("a"), root2.push("a"));
-		assert_eq!(root1.push_all(&["a", "b"]), root2.push_all(&["a", "b"]));
+		assert_eq!(root1.push_all(["a", "b"]), root2.push_all(["a", "b"]));
 
 		// Make sure that different paths in different roots do not compare equal
 		assert_ne!(root1.push("a"), root2.push("b"));
-		assert_ne!(root1.push_all(&["a", "b"]), root2.push_all(&["a", "b", "c"]));
+		assert_ne!(root1.push_all(["a", "b"]), root2.push_all(["a", "b", "c"]));
 	}
 
 	#[test]
@@ -433,21 +433,21 @@ mod tests {
 		let cp = ConfPath::default();
 
 		// Check that the same path creates the same hash
-		let (h1, h2) = hash_pair(cp.push_all(&["a", "b"]), cp.push_all(&["a", "b"]));
+		let (h1, h2) = hash_pair(cp.push_all(["a", "b"]), cp.push_all(["a", "b"]));
 		assert_eq!(h1, h2);
 
-		let (h1, h2) = hash_pair(cp.push_all(&["a", "b", "c"]), cp.push_all(&["a", "b", "c"]));
+		let (h1, h2) = hash_pair(cp.push_all(["a", "b", "c"]), cp.push_all(["a", "b", "c"]));
 		assert_eq!(h1, h2);
 
 		// Check that all values are used for a hash
-		let (h1, h2) = hash_pair(cp.push_all(&["a", "b"]), cp.push_all(&["a"]));
+		let (h1, h2) = hash_pair(cp.push_all(["a", "b"]), cp.push_all(["a"]));
 		assert_ne!(h1, h2);
 
-		let (h1, h2) = hash_pair(cp.push_all(&["a", "b"]), cp.push_all(&["b"]));
+		let (h1, h2) = hash_pair(cp.push_all(["a", "b"]), cp.push_all(["b"]));
 		assert_ne!(h1, h2);
 
 		// Check that there is no length extension problem
-		let (h1, h2) = hash_pair(cp.push_all(&["a", "b", "c"]), cp.push_all(&["a", "bc"]));
+		let (h1, h2) = hash_pair(cp.push_all(["a", "b", "c"]), cp.push_all(["a", "bc"]));
 		assert_ne!(h1, h2);
 	}
 
@@ -497,16 +497,18 @@ mod tests {
 		let cp = ConfPath::default();
 		cp.push("a");
 		cp.push("b");
-		cp.push_all(&["a", "a1"]);
+		cp.push_all(["a", "a1"]);
 
 		// The order of the returned elements is not guaranteed. Therefore we've
 		// to remove the returned elements form the reference_set and later
 		// check if the set is empty.
+		#[allow(clippy::mutable_key_type)] // This is one of the false positives mentioned in the docoumentation.
 		let mut reference_set: HashSet<ConfPath> = HashSet::from_iter([ConfPath::from(&["a"]), ConfPath::from(&["b"])].iter().cloned());
 		cp.children().for_each(|c| assert!(reference_set.remove(&c), "Iterator returned too many elements."));
 		assert_eq!(reference_set.len(), 0, "Iterator returned not enough elements.");
 
 		// Verify again with an intermediate node
+		#[allow(clippy::mutable_key_type)] // This is one of the false positives mentioned in the docoumentation.
 		let mut reference_set: HashSet<ConfPath> = HashSet::from_iter([ConfPath::from(&["a", "a1"])].iter().cloned());
 		cp.push("a").children().for_each(|c| assert!(reference_set.remove(&c), "Iterator returned too many elements."));
 		assert_eq!(reference_set.len(), 0, "Iterator returned not enough elements.");
@@ -526,6 +528,7 @@ mod tests {
 		// The order of the returned elements is not guaranteed. Therefore we've
 		// to remove the returned elements form the reference_set and later
 		// check if the set is empty.
+		#[allow(clippy::mutable_key_type)] // This is one of the false positives mentioned in the docoumentation.
 		let mut reference_set: HashSet<ConfPath> = HashSet::from_iter([ConfPath::from(&["a"]), ConfPath::from(&["b"])].iter().cloned());
 		root_child_iter.for_each(|c| assert!(reference_set.remove(&c), "Iterator returned to many elements."));
 		assert_eq!(reference_set.len(), 0, "Iterator returned not enough elements.");

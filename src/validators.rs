@@ -292,10 +292,10 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["ten"]), "10", "10");
-		d.set(c.root().push_all(&["five"]), "5", "5");
-		d.set(c.root().push_all(&["zero"]), "0", "0");
-		d.set(c.root().push_all(&["neg_one"]), "-1", "-1");
+		d.set(c.root().push_all(["ten"]), "10", "10");
+		d.set(c.root().push_all(["five"]), "5", "5");
+		d.set(c.root().push_all(["zero"]), "0", "0");
+		d.set(c.root().push_all(["neg_one"]), "-1", "-1");
 		c.add_source(d);
 
 		// Test min
@@ -324,7 +324,7 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["ten"]), "10", "10");
+		d.set(c.root().push_all(["ten"]), "10", "10");
 		c.add_source(d);
 
 		let _: u32 = c.get(ConfPath::from(&["ten"])).min(20).value().unwrap();
@@ -336,7 +336,7 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["ten"]), "10", "10");
+		d.set(c.root().push_all(["ten"]), "10", "10");
 		c.add_source(d);
 
 		let _: u32 = c.get(ConfPath::from(&["ten"])).max(5).value().unwrap();
@@ -348,7 +348,7 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["ten"]), "10", "10");
+		d.set(c.root().push_all(["ten"]), "10", "10");
 		c.add_source(d);
 
 		let _: u32 = c.get(ConfPath::from(&["ten"])).in_range(20..30).value().unwrap();
@@ -360,7 +360,7 @@ mod tests {
 		let mut c = Config::default();
 		let mut d = Defaults::default();
 
-		d.set(c.root().push_all(&["ten"]), "10", "10");
+		d.set(c.root().push_all(["ten"]), "10", "10");
 		c.add_source(d);
 
 		let _: u32 = c.get(ConfPath::from(&["ten"])).in_range(0..5).value().unwrap();

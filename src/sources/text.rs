@@ -442,7 +442,7 @@ pub fn stack_config(config: &mut Config, config_path: Option<&mut ConfPath>, fil
 		let this_path = path.join(file_name);
 		if let Ok(config_file) = File::open(&this_path) {
 			if let Some(config_path) = &config_path {
-				config.add_source(ConfigText::with_path(config_file, &this_path.to_string_lossy(), *config_path)?);
+				config.add_source(ConfigText::with_path(config_file, &this_path.to_string_lossy(), config_path)?);
 			} else {
 				config.add_source(ConfigText::new(config_file, &this_path.to_string_lossy())?);
 			}
@@ -461,9 +461,7 @@ mod tests {
 	use crate::error::ConfigError;
 
 	fn assert_item(items: StringItem, template: &[&str]) {
-		// This construction generates a Result-Value that can be used with the ValueExtractor-Trait-Impl to get the values of the StringItem.
-		// It's a little bit convoluted but makes sure we use the standard tooling for the test.
-		let items: Vec<String> = Ok(Result::<StringItem, ConfigError>::Ok(items).unwrap()).values(..).unwrap();
+		let items: Vec<String> = Ok(items).values(..).unwrap();
 		let mut items_iter = items.iter();
 		let mut tmpl_iter = template.iter();
 

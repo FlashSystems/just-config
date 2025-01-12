@@ -422,17 +422,17 @@ impl <T: FromStr> ValueExtractor<T> for Result<StringItem, ConfigError> where T:
 mod tests {
 	use super::*;
 	use crate::Config;
-	use crate::sources::defaults::{Defaults};
+	use crate::sources::defaults::Defaults;
 	use crate::error::ConfigError;
 
 	fn prepare_test_config() -> Config {
 		let mut c = Config::default();
 
 		let mut defaults = Defaults::default();
-		defaults.empty(c.root().push_all(&["no_value"]));
-		defaults.set(c.root().push_all(&["one_value"]), "one_value", "1.1");
-		defaults.put(c.root().push_all(&["two_values"]), "two_values", "2.1");
-		defaults.put(c.root().push_all(&["two_values"]), "two_values", "2.2");
+		defaults.empty(c.root().push_all(["no_value"]));
+		defaults.set(c.root().push_all(["one_value"]), "one_value", "1.1");
+		defaults.put(c.root().push_all(["two_values"]), "two_values", "2.1");
+		defaults.put(c.root().push_all(["two_values"]), "two_values", "2.2");
 		c.add_source(defaults);
 
 		c
@@ -442,49 +442,49 @@ mod tests {
 	fn value_no_value() {
 		let c = prepare_test_config();
 
-		assert_eq!(format!("{}", (c.get(c.root().push_all(&["no_value"])).value() as Result<String, ConfigError>).unwrap_err()), "Missing value for config key 'no_value'.");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(["no_value"])).value() as Result<String, ConfigError>).unwrap_err()), "Missing value for config key 'no_value'.");
 	}
 
 	#[test]
 	fn value_one_value() {
 		let c = prepare_test_config();
 
-		assert_eq!((c.get(c.root().push_all(&["one_value"])).value() as Result<String, ConfigError>).unwrap(), "one_value");
+		assert_eq!((c.get(c.root().push_all(["one_value"])).value() as Result<String, ConfigError>).unwrap(), "one_value");
 	}
 
 	#[test]
 	fn value_two_values() {
 		let c = prepare_test_config();
 
-		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).value() as Result<String, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.1', 'default from 2.2']");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(["two_values"])).value() as Result<String, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.1', 'default from 2.2']");
 	}
 
 	#[test]
 	fn try_value_no_value() {
 		let c = prepare_test_config();
 
-		assert!((c.get(c.root().push_all(&["no_value"])).try_value() as Result<Option<String>, ConfigError>).unwrap().is_none());
+		assert!((c.get(c.root().push_all(["no_value"])).try_value() as Result<Option<String>, ConfigError>).unwrap().is_none());
 	}
 
 	#[test]
 	fn try_value_one_value() {
 		let c = prepare_test_config();
 
-		assert_eq!((c.get(c.root().push_all(&["one_value"])).try_value() as Result<Option<String>, ConfigError>).unwrap().unwrap(), "one_value");
+		assert_eq!((c.get(c.root().push_all(["one_value"])).try_value() as Result<Option<String>, ConfigError>).unwrap().unwrap(), "one_value");
 	}
 
 	#[test]
 	fn try_value_two_values() {
 		let c = prepare_test_config();
 
-		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).try_value() as Result<Option<String>, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.1', 'default from 2.2']");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(["two_values"])).try_value() as Result<Option<String>, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.1', 'default from 2.2']");
 	}
 
 	#[test]
 	fn values_no_value() {
 		let c = prepare_test_config();
 
-		let values: Vec<String> = c.get(c.root().push_all(&["no_value"])).values(..).unwrap();
+		let values: Vec<String> = c.get(c.root().push_all(["no_value"])).values(..).unwrap();
 		assert_eq!(values.len(), 0);
 	}
 
@@ -492,7 +492,7 @@ mod tests {
 	fn values_one_value() {
 		let c = prepare_test_config();
 
-		let mut values: Vec<String> = c.get(c.root().push_all(&["one_value"])).values(..).unwrap();
+		let mut values: Vec<String> = c.get(c.root().push_all(["one_value"])).values(..).unwrap();
 		assert_eq!(values.len(), 1);
 		assert_eq!(values.pop().unwrap(), "one_value");
 	}
@@ -501,7 +501,7 @@ mod tests {
 	fn values_two_values() {
 		let c = prepare_test_config();
 
-		let mut values: Vec<String> = c.get(c.root().push_all(&["two_values"])).values(..).unwrap();
+		let mut values: Vec<String> = c.get(c.root().push_all(["two_values"])).values(..).unwrap();
 		assert_eq!(values.len(), 2);
 		assert_eq!(values.pop().unwrap(), "two_values");
 		assert_eq!(values.pop().unwrap(), "two_values");
@@ -511,57 +511,57 @@ mod tests {
 	fn range_lower_limit() {
 		let c = prepare_test_config();
 
-		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(3..) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'two_values\' must have at least 3 values.");
-		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(4..5) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'two_values\' must have at least 4 values.");
-		assert_eq!(format!("{}", (c.get(c.root().push_all(&["no_value"])).values(1..) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'no_value\' must have at least 1 values.");
-		assert_eq!(format!("{}", (c.get(c.root().push_all(&["unkown_key"])).values(1..) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'unkown_key\' must have at least 1 values.");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(["two_values"])).values(3..) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'two_values\' must have at least 3 values.");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(["two_values"])).values(4..5) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'two_values\' must have at least 4 values.");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(["no_value"])).values(1..) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'no_value\' must have at least 1 values.");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(["unkown_key"])).values(1..) as Result<Vec<String>, ConfigError>).unwrap_err()), "Key \'unkown_key\' must have at least 1 values.");
 	}
 
 	#[test]
 	fn range_upper_limit() {
 		let c = prepare_test_config();
 
-		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(..=1) as Result<Vec<String>, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.2']");
-		assert_eq!(format!("{}", (c.get(c.root().push_all(&["two_values"])).values(1..=1) as Result<Vec<String>, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.2']");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(["two_values"])).values(..=1) as Result<Vec<String>, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.2']");
+		assert_eq!(format!("{}", (c.get(c.root().push_all(["two_values"])).values(1..=1) as Result<Vec<String>, ConfigError>).unwrap_err()), "More than 1 value found for key two_values@['default from 2.2']");
 	}
 
 	#[test]
 	fn range_ok() {
 		let c = prepare_test_config();
 
-		let mut values: Vec<String> = c.get(c.root().push_all(&["two_values"])).values(1..=2).unwrap();
+		let mut values: Vec<String> = c.get(c.root().push_all(["two_values"])).values(1..=2).unwrap();
 		assert_eq!(values.len(), 2);
 		assert_eq!(values.pop().unwrap(), "two_values");
 		assert_eq!(values.pop().unwrap(), "two_values");
 
-		let mut values: Vec<String> = c.get(c.root().push_all(&["two_values"])).values(2..3).unwrap();
+		let mut values: Vec<String> = c.get(c.root().push_all(["two_values"])).values(2..3).unwrap();
 		assert_eq!(values.len(), 2);
 		assert_eq!(values.pop().unwrap(), "two_values");
 		assert_eq!(values.pop().unwrap(), "two_values");
 
-		let mut values: Vec<String> = c.get(c.root().push_all(&["two_values"])).values(0..10).unwrap();
+		let mut values: Vec<String> = c.get(c.root().push_all(["two_values"])).values(0..10).unwrap();
 		assert_eq!(values.len(), 2);
 		assert_eq!(values.pop().unwrap(), "two_values");
 		assert_eq!(values.pop().unwrap(), "two_values");
 
-		let mut values: Vec<String> = c.get(c.root().push_all(&["one_value"])).values(..3).unwrap();
+		let mut values: Vec<String> = c.get(c.root().push_all(["one_value"])).values(..3).unwrap();
 		assert_eq!(values.len(), 1);
 		assert_eq!(values.pop().unwrap(), "one_value");
 
-		let mut values: Vec<String> = c.get(c.root().push_all(&["one_value"])).values(1..).unwrap();
+		let mut values: Vec<String> = c.get(c.root().push_all(["one_value"])).values(1..).unwrap();
 		assert_eq!(values.len(), 1);
 		assert_eq!(values.pop().unwrap(), "one_value");
 
-		let values: Vec<String> = c.get(c.root().push_all(&["unkown_key"])).values(..).unwrap();
+		let values: Vec<String> = c.get(c.root().push_all(["unkown_key"])).values(..).unwrap();
 		assert_eq!(values.len(), 0);
 
-		let values: Vec<String> = c.get(c.root().push_all(&["unkown_key"])).values(..1).unwrap();
+		let values: Vec<String> = c.get(c.root().push_all(["unkown_key"])).values(..1).unwrap();
 		assert_eq!(values.len(), 0);
 
-		let values: Vec<String> = c.get(c.root().push_all(&["unkown_key"])).values(..=1).unwrap();
+		let values: Vec<String> = c.get(c.root().push_all(["unkown_key"])).values(..=1).unwrap();
 		assert_eq!(values.len(), 0);
 
-		let values: Vec<String> = c.get(c.root().push_all(&["unkown_key"])).values(..=0).unwrap();
+		let values: Vec<String> = c.get(c.root().push_all(["unkown_key"])).values(..=0).unwrap();
 		assert_eq!(values.len(), 0);
 	}
 }

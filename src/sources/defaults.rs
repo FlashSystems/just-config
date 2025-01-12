@@ -85,6 +85,7 @@ impl Defaults {
 	/// The created `Defaults` instance does not contain any values.
 	///
 	/// See the [`defaults`](mod@super::defaults) module for more information.
+	#[allow(clippy::should_implement_trait)]
 	pub fn default() -> Box<Self> {
 		Box::new(Self {
 			items: HashMap::default()
